@@ -1,0 +1,103 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'Jameel Noori Nastaliq';
+  src: local('Jameel Noori Nastaliq'),
+       local('Jameel Noori Nastaleeq'),
+       url('https://cdn.jsdelivr.net/gh/pakistan-digitization/urdu-fonts/Jameel%20Noori%20Nastaleeq.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --bg-page: #FBF9F5;
+    --text-primary: #1C242E;
+    --text-muted: #64748B;
+    --border-color: #E8E2D9;
+  }
+
+  .dark {
+    --bg-page: #0F1722;
+    --text-primary: #F3F4F6;
+    --text-muted: #94A3B8;
+    --border-color: #243245;
+  }
+
+  body {
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+}
+
+/* Authentic Nastaliq Typography */
+.font-nastaliq {
+  font-family: 'Jameel Noori Nastaliq', 'Jameel Noori Nastaliq Urdu', 'Noto Nastaliq Urdu', 'Urdu Typesetting', 'Mehr Nastaliq Web', serif;
+  font-feature-settings: "rlig" 1, "calt" 1;
+  text-rendering: optimizeLegibility;
+}
+
+.nastaliq-text {
+  font-family: 'Jameel Noori Nastaliq', 'Jameel Noori Nastaliq Urdu', 'Noto Nastaliq Urdu', 'Urdu Typesetting', 'Mehr Nastaliq Web', serif;
+  line-height: 2.35;
+  word-spacing: 0.1em;
+}
+
+/* Article Body Typography for Nastaliq */
+.article-prose {
+  font-family: 'Jameel Noori Nastaliq', 'Jameel Noori Nastaliq Urdu', 'Noto Nastaliq Urdu', 'Urdu Typesetting', serif;
+  line-height: 2.4;
+  text-align: right;
+  direction: rtl;
+}
+
+.article-prose p {
+  margin-bottom: 2rem;
+  text-align: justify;
+  text-justify: inter-word;
+}
+
+/* Poem Display Style: Centered line-by-line with generous vertical stanza breaks */
+.poem-container {
+  font-family: 'Jameel Noori Nastaliq', 'Jameel Noori Nastaliq Urdu', 'Noto Nastaliq Urdu', 'Urdu Typesetting', serif;
+  line-height: 2.5;
+  text-align: center;
+  direction: rtl;
+}
+
+.poem-container .stanza {
+  margin-bottom: 2.75rem;
+  padding: 1.25rem 0;
+  border-bottom: 1px dashed rgba(197, 155, 39, 0.25);
+}
+
+.poem-container .stanza:last-child {
+  border-bottom: none;
+}
+
+.poem-container .line {
+  display: block;
+  margin: 0.5rem 0;
+}
+
+/* Print Styles for PDF / Paper export */
+@media print {
+  header, footer, .no-print, .reader-toolbar {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .article-prose {
+    font-size: 18pt !important;
+    line-height: 2.5 !important;
+  }
+}
