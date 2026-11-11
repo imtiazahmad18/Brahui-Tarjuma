@@ -29,10 +29,7 @@ const config: Config = {
       },
       fontFamily: {
         nastaliq: [
-          "'Jameel Noori Nastaliq'",
-          "'Noto Nastaliq Urdu'",
-          "'Urdu Typesetting'",
-          "serif",
+          "var(--font-nastaliq)",
         ],
         serif: ["Georgia", "Cambria", "'Times New Roman'", "Times", "serif"],
         sans: [

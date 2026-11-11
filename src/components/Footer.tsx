@@ -1,9 +1,12 @@
+"use client";
 import React from "react";
 import Link from "next/link";
-import Image from "next/image";
-import { CATEGORIES } from "@/types";
+import { useLocale } from "@/components/LocaleProvider";
+import Logo from "@/components/Logo";
+
 
 export default function Footer() {
+  const { t } = useLocale();
   const currentYear = new Date().getFullYear();
 
   return (
@@ -13,50 +16,26 @@ export default function Footer() {
           {/* Brand & Mission */}
           <div className="md:col-span-2 space-y-4">
             <div className="flex items-center">
-              <div className="relative w-28 h-28 rounded-full overflow-hidden">
-                <Image
-                  src="/brand-logo-circle.png"
-                  alt="Brahui Matt o badal logo"
-                  fill
-                  sizes="112px"
-                  unoptimized
-                  className="object-contain"
-                />
-              </div>
+              <Logo width={220} height={172} sizes="220px" />
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-400 max-w-md leading-relaxed">
-              A specialized digital archive dedicated to translating world masterpieces, classical fiction, 
-              contemporary poetry, criticism, and scholarly research into the Brahui language, presented 
-              in authentic Jameel Noori Nastaliq script.
+              {t("footer.mission")}
             </p>
           </div>
 
-          {/* Categories */}
+          {/* Main sections */}
           <div>
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">
-              Categories
-            </h4>
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">{t("label.explore")}</h4>
             <ul className="space-y-2.5 text-sm">
-              {Object.values(CATEGORIES).map((cat) => (
-                <li key={cat.slug}>
-                  <Link
-                    href={`/category/${cat.slug}`}
-                    className="text-gray-700 dark:text-gray-300 hover:text-brand-teal dark:hover:text-teal-300 transition-colors flex items-center justify-between"
-                  >
-                    <span>{cat.englishName}</span>
-                    <span className="font-nastaliq text-xs text-brand-gold dark:text-amber-400" dir="rtl">
-                      {cat.urduName}
-                    </span>
-                  </Link>
-                </li>
-              ))}
+              <li><Link href="/poetry" className="text-gray-700 dark:text-gray-300 hover:text-brand-teal">{t("footer.poetry")}</Link></li>
+              <li><Link href="/prose" className="text-gray-700 dark:text-gray-300 hover:text-brand-teal">{t("footer.prose")}</Link></li>
             </ul>
           </div>
 
           {/* Navigation & Administration */}
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">
-              Library & Links
+              {t("label.libraryLinks")}
             </h4>
             <ul className="space-y-2.5 text-sm">
               <li>
@@ -64,7 +43,7 @@ export default function Footer() {
                   href="/writers"
                   className="text-gray-700 dark:text-gray-300 hover:text-brand-teal dark:hover:text-teal-300 transition-colors"
                 >
-                  Original Writers (نوشتہ کار)
+                  {t("menu.writers")}
                 </Link>
               </li>
               <li>
@@ -72,7 +51,7 @@ export default function Footer() {
                   href="/about"
                   className="text-gray-700 dark:text-gray-300 hover:text-brand-teal dark:hover:text-teal-300 transition-colors"
                 >
-                  About the Project
+                  {t("label.aboutProject")}
                 </Link>
               </li>
               <li>
@@ -80,7 +59,7 @@ export default function Footer() {
                   href="/contact"
                   className="text-gray-700 dark:text-gray-300 hover:text-brand-teal dark:hover:text-teal-300 transition-colors"
                 >
-                  Submissions & Contact
+                  {t("menu.contact")}
                 </Link>
               </li>
               <li className="pt-2 border-t border-gray-200 dark:border-gray-800">
@@ -88,7 +67,7 @@ export default function Footer() {
                   href="/admin"
                   className="text-xs font-semibold text-brand-teal dark:text-teal-400 hover:underline inline-flex items-center gap-1"
                 >
-                  <span>Admin Login</span>
+                  <span>{t("label.adminLogin")}</span>
                   <span aria-hidden="true">&rarr;</span>
                 </Link>
               </li>
@@ -99,10 +78,7 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row items-center justify-between text-xs text-gray-500 dark:text-gray-400">
           <p>
-            &copy; {currentYear} Brahui Matt o badal. Preserving and translating literature into Brahui.
-          </p>
-          <p className="mt-2 sm:mt-0 font-nastaliq text-sm" dir="rtl">
-            براہوئی زبان ٹی جہانی ادب نا مٹ و بدل
+            &copy; {currentYear} {t("site.name")}. {t("footer.copyright")}
           </p>
         </div>
       </div>

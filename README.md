@@ -1,1 +1,1 @@
-# Brahui-Tarjuma
+# Brahui Laozaank

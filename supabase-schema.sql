@@ -1,5 +1,5 @@
 -- ==============================================================================
--- BRAHUI MATT O BADAL - SUPABASE DATABASE SCHEMA & RLS POLICIES
+-- BRAHUI LAOZAANK - SUPABASE DATABASE SCHEMA & RLS POLICIES
 -- ==============================================================================
 
 -- 1. Enable pg_trgm extension for fast Arabic/Urdu/Brahui text search
@@ -12,17 +12,67 @@ CREATE TABLE IF NOT EXISTS writers (
     slug TEXT UNIQUE NOT NULL,
     bio TEXT,
     photo_url TEXT,
+    writer_type TEXT NOT NULL DEFAULT 'foreign' CHECK (writer_type IN ('brahui', 'foreign')),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- 2b. NESTED POETRY / PROSE CATEGORIES
+CREATE TABLE IF NOT EXISTS categories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    slug TEXT NOT NULL UNIQUE,
+    name_en TEXT NOT NULL,
+    name_ur TEXT NOT NULL,
+    name_brh TEXT,
+    parent_id UUID REFERENCES categories(id) ON DELETE RESTRICT,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    level INTEGER NOT NULL DEFAULT 0
+);
+
+-- Seed all taxonomy nodes.
+INSERT INTO categories (slug, name_en, name_ur, parent_id, sort_order, level) VALUES ('poetry','Poetry','شاعری',NULL,1,0) ON CONFLICT (slug) DO UPDATE SET name_en=EXCLUDED.name_en, name_ur=EXCLUDED.name_ur, parent_id=EXCLUDED.parent_id, sort_order=EXCLUDED.sort_order, level=EXCLUDED.level;
+INSERT INTO categories (slug, name_en, name_ur, parent_id, sort_order, level) VALUES ('prose','Prose','نثر',NULL,2,0) ON CONFLICT (slug) DO UPDATE SET name_en=EXCLUDED.name_en, name_ur=EXCLUDED.name_ur, parent_id=EXCLUDED.parent_id, sort_order=EXCLUDED.sort_order, level=EXCLUDED.level;
+
+INSERT INTO categories (slug, name_en, name_ur, parent_id, sort_order, level) VALUES ('ghazal','Ghazal','غزل',(SELECT id FROM categories WHERE slug='poetry'),1,1) ON CONFLICT (slug) DO UPDATE SET name_en=EXCLUDED.name_en, name_ur=EXCLUDED.name_ur, parent_id=EXCLUDED.parent_id, sort_order=EXCLUDED.sort_order, level=EXCLUDED.level;
+INSERT INTO categories (slug, name_en, name_ur, parent_id, sort_order, level) VALUES ('sher','Couplet / Sher','شعر',(SELECT id FROM categories WHERE slug='poetry'),2,1) ON CONFLICT (slug) DO UPDATE SET name_en=EXCLUDED.name_en, name_ur=EXCLUDED.name_ur, parent_id=EXCLUDED.parent_id, sort_order=EXCLUDED.sort_order, level=EXCLUDED.level;
+INSERT INTO categories (slug, name_en, name_ur, parent_id, sort_order, level) VALUES ('rubai','Quatrain / Rubai','رباعی',(SELECT id FROM categories WHERE slug='poetry'),3,1) ON CONFLICT (slug) DO UPDATE SET name_en=EXCLUDED.name_en, name_ur=EXCLUDED.name_ur, parent_id=EXCLUDED.parent_id, sort_order=EXCLUDED.sort_order, level=EXCLUDED.level;
+INSERT INTO categories (slug, name_en, name_ur, parent_id, sort_order, level) VALUES ('nazm','Nazm','نظم',(SELECT id FROM categories WHERE slug='poetry'),4,1) ON CONFLICT (slug) DO UPDATE SET name_en=EXCLUDED.name_en, name_ur=EXCLUDED.name_ur, parent_id=EXCLUDED.parent_id, sort_order=EXCLUDED.sort_order, level=EXCLUDED.level;
+INSERT INTO categories (slug, name_en, name_ur, parent_id, sort_order, level) VALUES ('folk-poetry','Folk Poetry','لوک شاعری',(SELECT id FROM categories WHERE slug='poetry'),5,1) ON CONFLICT (slug) DO UPDATE SET name_en=EXCLUDED.name_en, name_ur=EXCLUDED.name_ur, parent_id=EXCLUDED.parent_id, sort_order=EXCLUDED.sort_order, level=EXCLUDED.level;
+INSERT INTO categories (slug, name_en, name_ur, parent_id, sort_order, level) VALUES ('other-poetry','Other Poetry','دیگر',(SELECT id FROM categories WHERE slug='poetry'),6,1) ON CONFLICT (slug) DO UPDATE SET name_en=EXCLUDED.name_en, name_ur=EXCLUDED.name_ur, parent_id=EXCLUDED.parent_id, sort_order=EXCLUDED.sort_order, level=EXCLUDED.level;
+INSERT INTO categories (slug, name_en, name_ur, parent_id, sort_order, level) VALUES ('fiction','Fiction','فکشن',(SELECT id FROM categories WHERE slug='prose'),1,1) ON CONFLICT (slug) DO UPDATE SET name_en=EXCLUDED.name_en, name_ur=EXCLUDED.name_ur, parent_id=EXCLUDED.parent_id, sort_order=EXCLUDED.sort_order, level=EXCLUDED.level;
+INSERT INTO categories (slug, name_en, name_ur, parent_id, sort_order, level) VALUES ('non-fiction','Non-Fiction','غیر افسانوی',(SELECT id FROM categories WHERE slug='prose'),2,1) ON CONFLICT (slug) DO UPDATE SET name_en=EXCLUDED.name_en, name_ur=EXCLUDED.name_ur, parent_id=EXCLUDED.parent_id, sort_order=EXCLUDED.sort_order, level=EXCLUDED.level;
+
+INSERT INTO categories (slug, name_en, name_ur, parent_id, sort_order, level) VALUES ('prose-poem','Prose Poem','نثری نظم',(SELECT id FROM categories WHERE slug='nazm'),1,2) ON CONFLICT (slug) DO UPDATE SET name_en=EXCLUDED.name_en, name_ur=EXCLUDED.name_ur, parent_id=EXCLUDED.parent_id, sort_order=EXCLUDED.sort_order, level=EXCLUDED.level;
+INSERT INTO categories (slug, name_en, name_ur, parent_id, sort_order, level) VALUES ('free-verse','Free Verse','آزاد نظم',(SELECT id FROM categories WHERE slug='nazm'),2,2) ON CONFLICT (slug) DO UPDATE SET name_en=EXCLUDED.name_en, name_ur=EXCLUDED.name_ur, parent_id=EXCLUDED.parent_id, sort_order=EXCLUDED.sort_order, level=EXCLUDED.level;
+INSERT INTO categories (slug, name_en, name_ur, parent_id, sort_order, level) VALUES ('blank-verse','Blank Verse','نظمِ معریٰ',(SELECT id FROM categories WHERE slug='nazm'),3,2) ON CONFLICT (slug) DO UPDATE SET name_en=EXCLUDED.name_en, name_ur=EXCLUDED.name_ur, parent_id=EXCLUDED.parent_id, sort_order=EXCLUDED.sort_order, level=EXCLUDED.level;
+INSERT INTO categories (slug, name_en, name_ur, parent_id, sort_order, level) VALUES ('short-story','Short Story','افسانہ / مختصر کہانی',(SELECT id FROM categories WHERE slug='fiction'),1,2) ON CONFLICT (slug) DO UPDATE SET name_en=EXCLUDED.name_en, name_ur=EXCLUDED.name_ur, parent_id=EXCLUDED.parent_id, sort_order=EXCLUDED.sort_order, level=EXCLUDED.level;
+INSERT INTO categories (slug, name_en, name_ur, parent_id, sort_order, level) VALUES ('novelette','Novelette','ناولٹ',(SELECT id FROM categories WHERE slug='fiction'),2,2) ON CONFLICT (slug) DO UPDATE SET name_en=EXCLUDED.name_en, name_ur=EXCLUDED.name_ur, parent_id=EXCLUDED.parent_id, sort_order=EXCLUDED.sort_order, level=EXCLUDED.level;
+INSERT INTO categories (slug, name_en, name_ur, parent_id, sort_order, level) VALUES ('novel','Novel','ناول',(SELECT id FROM categories WHERE slug='fiction'),3,2) ON CONFLICT (slug) DO UPDATE SET name_en=EXCLUDED.name_en, name_ur=EXCLUDED.name_ur, parent_id=EXCLUDED.parent_id, sort_order=EXCLUDED.sort_order, level=EXCLUDED.level;
+INSERT INTO categories (slug, name_en, name_ur, parent_id, sort_order, level) VALUES ('drama','Drama','ڈراما',(SELECT id FROM categories WHERE slug='fiction'),4,2) ON CONFLICT (slug) DO UPDATE SET name_en=EXCLUDED.name_en, name_ur=EXCLUDED.name_ur, parent_id=EXCLUDED.parent_id, sort_order=EXCLUDED.sort_order, level=EXCLUDED.level;
+INSERT INTO categories (slug, name_en, name_ur, parent_id, sort_order, level) VALUES ('folk-tales','Folk Tales','لوک کہانیاں',(SELECT id FROM categories WHERE slug='fiction'),5,2) ON CONFLICT (slug) DO UPDATE SET name_en=EXCLUDED.name_en, name_ur=EXCLUDED.name_ur, parent_id=EXCLUDED.parent_id, sort_order=EXCLUDED.sort_order, level=EXCLUDED.level;
+INSERT INTO categories (slug, name_en, name_ur, parent_id, sort_order, level) VALUES ('humour-satire','Humour & Satire','طنز و مزاح',(SELECT id FROM categories WHERE slug='fiction'),6,2) ON CONFLICT (slug) DO UPDATE SET name_en=EXCLUDED.name_en, name_ur=EXCLUDED.name_ur, parent_id=EXCLUDED.parent_id, sort_order=EXCLUDED.sort_order, level=EXCLUDED.level;
+INSERT INTO categories (slug, name_en, name_ur, parent_id, sort_order, level) VALUES ('articles','Articles','مضامین',(SELECT id FROM categories WHERE slug='non-fiction'),1,2) ON CONFLICT (slug) DO UPDATE SET name_en=EXCLUDED.name_en, name_ur=EXCLUDED.name_ur, parent_id=EXCLUDED.parent_id, sort_order=EXCLUDED.sort_order, level=EXCLUDED.level;
+INSERT INTO categories (slug, name_en, name_ur, parent_id, sort_order, level) VALUES ('essays','Essays','انشائیے',(SELECT id FROM categories WHERE slug='non-fiction'),2,2) ON CONFLICT (slug) DO UPDATE SET name_en=EXCLUDED.name_en, name_ur=EXCLUDED.name_ur, parent_id=EXCLUDED.parent_id, sort_order=EXCLUDED.sort_order, level=EXCLUDED.level;
+INSERT INTO categories (slug, name_en, name_ur, parent_id, sort_order, level) VALUES ('research','Research','تحقیق',(SELECT id FROM categories WHERE slug='non-fiction'),3,2) ON CONFLICT (slug) DO UPDATE SET name_en=EXCLUDED.name_en, name_ur=EXCLUDED.name_ur, parent_id=EXCLUDED.parent_id, sort_order=EXCLUDED.sort_order, level=EXCLUDED.level;
+INSERT INTO categories (slug, name_en, name_ur, parent_id, sort_order, level) VALUES ('criticism','Criticism','تنقید',(SELECT id FROM categories WHERE slug='non-fiction'),4,2) ON CONFLICT (slug) DO UPDATE SET name_en=EXCLUDED.name_en, name_ur=EXCLUDED.name_ur, parent_id=EXCLUDED.parent_id, sort_order=EXCLUDED.sort_order, level=EXCLUDED.level;
+INSERT INTO categories (slug, name_en, name_ur, parent_id, sort_order, level) VALUES ('interviews','Interviews','انٹرویوز',(SELECT id FROM categories WHERE slug='non-fiction'),5,2) ON CONFLICT (slug) DO UPDATE SET name_en=EXCLUDED.name_en, name_ur=EXCLUDED.name_ur, parent_id=EXCLUDED.parent_id, sort_order=EXCLUDED.sort_order, level=EXCLUDED.level;
+INSERT INTO categories (slug, name_en, name_ur, parent_id, sort_order, level) VALUES ('biographies','Biographies','سوانح',(SELECT id FROM categories WHERE slug='non-fiction'),6,2) ON CONFLICT (slug) DO UPDATE SET name_en=EXCLUDED.name_en, name_ur=EXCLUDED.name_ur, parent_id=EXCLUDED.parent_id, sort_order=EXCLUDED.sort_order, level=EXCLUDED.level;
+INSERT INTO categories (slug, name_en, name_ur, parent_id, sort_order, level) VALUES ('memoirs','Memoirs & Autobiography','خود نوشت',(SELECT id FROM categories WHERE slug='non-fiction'),7,2) ON CONFLICT (slug) DO UPDATE SET name_en=EXCLUDED.name_en, name_ur=EXCLUDED.name_ur, parent_id=EXCLUDED.parent_id, sort_order=EXCLUDED.sort_order, level=EXCLUDED.level;
+INSERT INTO categories (slug, name_en, name_ur, parent_id, sort_order, level) VALUES ('sketches','Sketches','خاکے',(SELECT id FROM categories WHERE slug='non-fiction'),8,2) ON CONFLICT (slug) DO UPDATE SET name_en=EXCLUDED.name_en, name_ur=EXCLUDED.name_ur, parent_id=EXCLUDED.parent_id, sort_order=EXCLUDED.sort_order, level=EXCLUDED.level;
+INSERT INTO categories (slug, name_en, name_ur, parent_id, sort_order, level) VALUES ('travelogue','Travelogue','سفرنامہ',(SELECT id FROM categories WHERE slug='non-fiction'),9,2) ON CONFLICT (slug) DO UPDATE SET name_en=EXCLUDED.name_en, name_ur=EXCLUDED.name_ur, parent_id=EXCLUDED.parent_id, sort_order=EXCLUDED.sort_order, level=EXCLUDED.level;
+INSERT INTO categories (slug, name_en, name_ur, parent_id, sort_order, level) VALUES ('letters','Letters','خطوط',(SELECT id FROM categories WHERE slug='non-fiction'),10,2) ON CONFLICT (slug) DO UPDATE SET name_en=EXCLUDED.name_en, name_ur=EXCLUDED.name_ur, parent_id=EXCLUDED.parent_id, sort_order=EXCLUDED.sort_order, level=EXCLUDED.level;
+INSERT INTO categories (slug, name_en, name_ur, parent_id, sort_order, level) VALUES ('reviews','Reviews','تبصرے',(SELECT id FROM categories WHERE slug='non-fiction'),11,2) ON CONFLICT (slug) DO UPDATE SET name_en=EXCLUDED.name_en, name_ur=EXCLUDED.name_ur, parent_id=EXCLUDED.parent_id, sort_order=EXCLUDED.sort_order, level=EXCLUDED.level;
 
 -- 3. ARTICLES TABLE
 CREATE TABLE IF NOT EXISTS articles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT NOT NULL,
+    content_type TEXT NOT NULL DEFAULT 'translation' CHECK (content_type IN ('translation', 'original')),
     subtitle TEXT,
     slug TEXT UNIQUE NOT NULL,
-    category TEXT NOT NULL CHECK (category IN ('fiction', 'poetry', 'criticism', 'research', 'articles')),
+    category TEXT NOT NULL,
+    category_id UUID NOT NULL REFERENCES categories(id),
+    is_featured BOOLEAN NOT NULL DEFAULT false,
     body TEXT NOT NULL,
     cover_image_url TEXT NOT NULL,
     cover_alt TEXT,
@@ -33,6 +83,9 @@ CREATE TABLE IF NOT EXISTS articles (
     original_dir TEXT DEFAULT 'ltr' CHECK (original_dir IN ('ltr', 'rtl')),
     source_credit TEXT,
     translator_name TEXT,
+    translator_title TEXT,
+    fiction_form TEXT CHECK (fiction_form IN ('short_story', 'novel', 'other')),
+    references_text TEXT,
     pdf_url TEXT,
     meta_description TEXT,
     status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'published')),
@@ -76,6 +129,9 @@ CREATE INDEX IF NOT EXISTS idx_contact_messages_created_at ON contact_messages(c
 CREATE INDEX IF NOT EXISTS idx_articles_slug ON articles(slug);
 CREATE INDEX IF NOT EXISTS idx_articles_status_published ON articles(status, published_at DESC);
 CREATE INDEX IF NOT EXISTS idx_articles_category ON articles(category);
+CREATE INDEX IF NOT EXISTS idx_articles_category_id ON articles(category_id);
+CREATE INDEX IF NOT EXISTS idx_articles_is_featured ON articles(is_featured) WHERE is_featured = true;
+CREATE INDEX IF NOT EXISTS idx_articles_content_type ON articles(content_type);
 CREATE INDEX IF NOT EXISTS idx_articles_writer_id ON articles(writer_id);
 CREATE INDEX IF NOT EXISTS idx_chapters_article_id ON chapters(article_id, chapter_number ASC);
 CREATE INDEX IF NOT EXISTS idx_writers_slug ON writers(slug);
@@ -87,6 +143,7 @@ CREATE INDEX IF NOT EXISTS idx_writers_name_trgm ON writers USING gin (name gin_
 
 -- 7. ROW LEVEL SECURITY (RLS)
 ALTER TABLE writers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE articles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chapters ENABLE ROW LEVEL SECURITY;
 ALTER TABLE static_pages ENABLE ROW LEVEL SECURITY;
@@ -100,6 +157,13 @@ ALTER TABLE contact_messages ENABLE ROW LEVEL SECURITY;
 -- WHERE lower(email) = lower('YOUR_OWNER_EMAIL');
 
 -- Recreate these policies so this script can be safely run again.
+DROP POLICY IF EXISTS "Public can view categories" ON categories;
+DROP POLICY IF EXISTS "Admin full access on categories" ON categories;
+CREATE POLICY "Public can view categories" ON categories FOR SELECT USING (true);
+CREATE POLICY "Admin full access on categories" ON categories FOR ALL TO authenticated
+  USING ((auth.jwt() -> 'app_metadata' ->> 'role') = 'owner')
+  WITH CHECK ((auth.jwt() -> 'app_metadata' ->> 'role') = 'owner');
+
 DROP POLICY IF EXISTS "Public can view writers" ON writers;
 DROP POLICY IF EXISTS "Admin full access on writers" ON writers;
 DROP POLICY IF EXISTS "Public can view published articles" ON articles;
@@ -178,23 +242,23 @@ CREATE POLICY "Admin delete pdfs" ON storage.objects FOR DELETE TO authenticated
 INSERT INTO static_pages (id, title, body)
 VALUES (
     'about',
-    'About Brahui Matt o badal (براہوئی مٹ و بدل نا باروٹ)',
-    'Welcome to Brahui Matt o badal (براہوئی مٹ و بدل) — a dedicated literary repository committed to translating world masterpieces, classical fiction, contemporary poetry, critical essays, and thought-provoking research into the rich and ancient Brahui language.
+    'About Brahui Laozaank (براہوئی لوزانک نا باروٹ)',
+    'Welcome to Brahui Laozaank (براہوئی لوزانک) — a dedicated literary repository committed to publishing original writing in Brahui and translations of world literature, poetry, criticism, and research into Brahui.
 
 Our mission is to bridge cultures and philosophies by enriching Brahui literature with the world’s finest intellectual treasures, rendered in authentic Jameel Noori Nastaliq script.
 
-Founded as a focused digital archive, Brahui Matt o badal connects Brahui readers and students of literature to universal ideas while celebrating the linguistic beauty and expressive power of Brahui.'
+Founded as a focused digital archive, Brahui Laozaank connects Brahui readers and students of literature to universal ideas while celebrating the linguistic beauty and expressive power of Brahui.'
 ) ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, body = EXCLUDED.body;
 
 INSERT INTO static_pages (id, title, body)
 VALUES (
     'contact',
-    'Contact Brahui Matt o badal (رابطہ)',
-    'If you are a translator, researcher, or writer who has translated world literature, poetry, fiction, or criticism into Brahui, we warmly welcome your contributions. 
+    'Contact Brahui Laozaank (رابطہ)',
+    'If you are a Brahui writer, translator, researcher, or poet, we welcome original writing in Brahui and translations into Brahui.
 
 Please reach out to the editor at:
 Email: editor@brahuitarjuma.org (or your personal admin contact)
 Location: Quetta / Balochistan, Pakistan
 
-Submissions should include the Brahui text, original source credits, and original author details.'
+Original submissions should include the Brahui text and author details. Translations should include the source credit, original author, and translator details.'
 ) ON CONFLICT (id) DO UPDATE SET body = EXCLUDED.body;

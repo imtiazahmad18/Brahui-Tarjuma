@@ -1,74 +1,19 @@
 import { MetadataRoute } from "next";
 import { getPublishedArticles, getAllWriters } from "@/lib/data";
-import { CATEGORIES } from "@/types";
+import { CATEGORY_NODES, categoryPath } from "@/types";
 
+export const dynamic = "force-dynamic";
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://brahuitarjuma.org";
-  const articles = await getPublishedArticles();
-  const writers = await getAllWriters();
-
+  const [articles, writers] = await Promise.all([getPublishedArticles(), getAllWriters()]);
+  const usedPaths = new Set<string>();
+  for (const article of articles) for (const node of categoryPath(article.category)) usedPaths.add(node.href);
   const routes: MetadataRoute.Sitemap = [
-    {
-      url: `${siteUrl}`,
-      lastModified: new Date(),
-      changeFrequency: "daily",
-      priority: 1.0,
-    },
-    {
-      url: `${siteUrl}/search`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.8,
-    },
-    {
-      url: `${siteUrl}/writers`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.8,
-    },
-    {
-      url: `${siteUrl}/about`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
-    {
-      url: `${siteUrl}/contact`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
+    { url: siteUrl, lastModified: new Date(), changeFrequency: "daily", priority: 1 },
+    ...["/search", "/writers", "/about", "/contact"].map((path) => ({ url: `${siteUrl}${path}`, lastModified: new Date(), changeFrequency: "weekly" as const, priority: 0.7 })),
+    ...CATEGORY_NODES.filter((node) => usedPaths.has(node.href)).map((node) => ({ url: `${siteUrl}${node.href}`, lastModified: new Date(), changeFrequency: "daily" as const, priority: node.level === 0 ? 0.9 : 0.8 })),
+    ...writers.map((writer) => ({ url: `${siteUrl}/writer/${writer.slug}`, lastModified: writer.updated_at ? new Date(writer.updated_at) : new Date(), changeFrequency: "weekly" as const, priority: 0.7 })),
+    ...articles.map((article) => ({ url: `${siteUrl}/article/${article.slug}`, lastModified: article.updated_at ? new Date(article.updated_at) : new Date(), changeFrequency: "weekly" as const, priority: 0.9 })),
   ];
-
-  // Category pages
-  Object.keys(CATEGORIES).forEach((cat) => {
-    routes.push({
-      url: `${siteUrl}/category/${cat}`,
-      lastModified: new Date(),
-      changeFrequency: "daily",
-      priority: 0.9,
-    });
-  });
-
-  // Writer pages
-  writers.forEach((w) => {
-    routes.push({
-      url: `${siteUrl}/writer/${w.slug}`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.8,
-    });
-  });
-
-  // Article pages (EXCLUDES /original and /admin as required!)
-  articles.forEach((a) => {
-    routes.push({
-      url: `${siteUrl}/article/${a.slug}`,
-      lastModified: a.updated_at ? new Date(a.updated_at) : new Date(),
-      changeFrequency: "weekly",
-      priority: 0.9,
-    });
-  });
-
   return routes;
 }

@@ -3,19 +3,19 @@ import { StaticPageData } from "@/types";
 export const STATIC_PAGES_SEED: Record<string, StaticPageData> = {
   about: {
     id: "about",
-    title: "About Brahui Matt o badal (براہوئی مٹ و بدل)",
-    body: `Brahui Matt o badal (براہوئی مٹ و بدل) is a specialized digital repository and publishing platform founded to enrich the Brahui language with translations of world literature, philosophical essays, classical and modern poetry, and literary criticism.
+    title: "About Brahui Laozaank (براہوئی لوزانک)",
+    body: `Brahui Laozaank (براہوئی لوزانک) publishes both original writing in Brahui by Brahui writers and translations of world literature, poetry, criticism, and research into Brahui.
 
 Written in the time-honored Nastaliq calligraphic tradition, our digital archive provides open, free access to Brahui speakers, students, researchers, and book lovers around the globe.
 
-Every translation is carefully curated, reviewed, and published with full attribution to the original author, original work, and the translator who contributed the labor of love.
+Original works are attributed to their Brahui authors. Translations include attribution to the original author, source work, and translator.
 
 Our commitment is to celebrate the depth and beauty of Brahui vocabulary while bridging linguistic borders.`,
   },
   contact: {
     id: "contact",
-    title: "Contact & Translation Submissions (رابطہ)",
-    body: `Are you a translator working in Brahui? Do you have an unpublished translation of a story, poem, essay, or novel?
+    title: "Contact & Submissions (رابطہ)",
+    body: `Are you a Brahui writer or a translator working into Brahui? Send us an original story, poem, essay, research work, or translation.
 
 We welcome submissions from translators, poets, and scholars who wish to share their work with our reading community.
 

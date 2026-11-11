@@ -1,8 +1,148 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --font-nastaliq: "Jameel Noori Nastaliq", "Noto Nastaliq Urdu", "Urdu Typesetting", serif;
+  --font-ui: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --brh-text-nav: 21px;
+  --brh-text-menu: 20px;
+  --brh-text-drawer: 22px;
+  --brh-text-control: 19px;
+  --brh-text-body: 25px;
+  --brh-text-poem: 27px;
+  --brh-text-title: 42px;
+  --brh-text-card-title: 25px;
+  --brh-text-meta: 18px;
+  --brh-text-small: 17px;
+}
+
+.brand-logo { position: relative; display: inline-block; flex: 0 0 auto; line-height: 0; }
+.brand-logo-image { display: block; width: auto; height: 100%; max-width: 100%; object-fit: contain; }
+.brand-logo-dark { display: none; }
+.dark .brand-logo-light { display: none; }
+.dark .brand-logo-dark { display: block; }
+.hero-logo { width: 360px !important; height: 283px !important; max-width: 100%; }
+@media (max-width: 639px) { .hero-logo { width: 280px !important; height: 220px !important; } }
+
+@font-face {
+  font-family: "Jameel Noori Nastaliq";
+  src: url("/fonts/jameel-noori-nastaliq.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+html.locale-brh body, html.locale-brh button, html.locale-brh input,
+html.locale-brh select, html.locale-brh textarea, html.locale-brh nav,
+html.locale-brh footer, html.locale-brh [role="menu"] {
+  font-family: var(--font-nastaliq);
+  font-size: var(--brh-text-meta);
+  line-height: 2.1;
+  letter-spacing: normal;
+  text-transform: none;
+}
+html.locale-brh button, html.locale-brh a, html.locale-brh input, html.locale-brh select {
+  min-height: 3.2rem;
+  line-height: 2.1;
+  padding-block: 0.45rem;
+  letter-spacing: normal;
+  text-transform: none;
+}
+html.locale-brh article .font-nastaliq,
+html.locale-brh article .nastaliq-text,
+html.locale-brh article .article-prose,
+html.locale-brh article .poem-container { font-family: var(--font-nastaliq); line-height: 2.25; }
+html.locale-brh .font-nastaliq,
+html.locale-brh .nastaliq-text,
+html.locale-brh .article-prose,
+html.locale-brh .poem-container { font-family: var(--font-nastaliq); letter-spacing: normal; text-transform: none; }
+html.locale-brh button, html.locale-brh input, html.locale-brh select { font-size: var(--brh-text-control); }
+html.locale-brh .font-nastaliq { line-height: 2.15; }
+html.locale-brh .line-clamp-1, html.locale-brh .line-clamp-2, html.locale-brh .line-clamp-3 { padding-block: 0.08em; }
+
+/* Brahui Nastaliq scale. All values live at :root above for easy tuning. */
+html.locale-brh #site-content { font-family: var(--font-nastaliq); }
+html.locale-brh #site-content * { font-family: var(--font-nastaliq); letter-spacing: normal; text-transform: none; }
+html.locale-brh #site-content :is(button, input, select, textarea, a, [role="button"], [role="menuitem"], [role="tab"]) { font-family: var(--font-nastaliq); }
+html.locale-brh #site-content :is(button, [role="button"], [role="tab"], a[aria-current]) { font-size: var(--brh-text-control) !important; }
+html.locale-brh header { min-height: 5rem; transition: min-height 180ms ease; }
+html.locale-brh .mobile-drawer { top: 5rem; }
+html.locale-brh header nav[aria-label] > a,
+html.locale-brh header nav[aria-label] > div > div > a { font-size: var(--brh-text-nav) !important; line-height: 2.1; min-height: 3.4rem; }
+html.locale-brh [role="menu"] a, html.locale-brh .menu-popover a { font-size: var(--brh-text-menu) !important; min-height: 3.2rem; line-height: 2.1; }
+html.locale-brh .mobile-drawer nav > section > div > a,
+html.locale-brh .mobile-drawer nav > a,
+html.locale-brh .mobile-drawer nav > button { font-size: var(--brh-text-drawer) !important; min-height: 3.6rem; line-height: 2.1; }
+html.locale-brh .mobile-drawer a { font-size: var(--brh-text-menu) !important; line-height: 2.1; min-height: 3.2rem; }
+html.locale-brh #site-content input, html.locale-brh #site-content input::placeholder { font-size: var(--brh-text-control) !important; }
+html.locale-brh article .article-prose { font-size: var(--brh-text-body); line-height: 2.4; }
+html.locale-brh article .poem-container { font-size: var(--brh-text-poem); line-height: 2.4; }
+html.locale-brh article .poem-container .line,
+html.locale-brh article .poem-container .font-nastaliq { line-height: 2.4; }
+html.locale-brh article h1[lang="brh"] { font-size: var(--brh-text-title) !important; line-height: 2.05; }
+html.locale-brh .font-nastaliq { font-size: max(18px, 1em); }
+html.locale-brh footer { font-size: var(--brh-text-meta); line-height: 2.2; }
+html.locale-brh #site-content :is(.text-xs, .text-\[11px\]) { font-size: var(--brh-text-small) !important; line-height: 2.1; }
+html.locale-brh #site-content :is(.text-sm) { font-size: var(--brh-text-meta) !important; line-height: 2.1; }
+html.locale-brh #site-content :is(.text-base) { font-size: 20px !important; line-height: 2.1; }
+html.locale-brh #site-content :is(.text-lg, .text-xl, .text-2xl) { font-size: var(--brh-text-card-title) !important; line-height: 2.05; }
+html.locale-brh #site-content :is(.text-3xl, .text-4xl, .text-5xl) { font-size: var(--brh-text-title) !important; line-height: 2.05; }
+html.locale-brh #site-content .language-switch-option { font-size: var(--brh-text-small); }
+html.locale-brh #site-content :is(.badge, [data-badge]) { font-size: var(--brh-text-small); }
+html.locale-brh #site-content :is(.pagination, nav[aria-label*="agination"]) a { font-size: var(--brh-text-small); }
+
+@media (max-width: 639px) {
+  html.locale-brh {
+    --brh-text-nav: 22px;
+    --brh-text-menu: 20px;
+    --brh-text-drawer: 22px;
+    --brh-text-control: 19px;
+    --brh-text-body: 22px;
+    --brh-text-poem: 24px;
+    --brh-text-title: 33px;
+    --brh-text-card-title: 24px;
+    --brh-text-meta: 18px;
+  }
+  html.locale-brh header { min-height: 5rem; }
+}
+
+@media (min-width: 640px) and (max-width: 1099px) {
+  html.locale-brh { --brh-text-title: 36px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.locale-brh header { transition: none; }
+}
+
+html.locale-switching #site-content { opacity: 0.25; transform: translateY(2px); }
+#site-content { transition: opacity 180ms ease, transform 180ms ease; }
+::view-transition-old(root) { animation: 90ms ease-in both locale-fade-out; }
+::view-transition-new(root) { animation: 170ms ease-out 40ms both locale-fade-in; }
+@keyframes locale-fade-out { to { opacity: 0; } }
+@keyframes locale-fade-in { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
+.menu-popover { animation: menu-pop-in 160ms ease-out both; transform-origin: top center; }
+@keyframes menu-pop-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+html.locale-brh .menu-popover { transform-origin: top right; }
+.language-switch { position: relative; display: inline-grid; grid-template-columns: 1fr 1fr; align-items: center; width: 132px; min-height: 46px; padding: 3px; overflow: hidden; border: 1px solid var(--border-color); border-radius: 0.8rem; background: var(--bg-page); }
+.language-switch-indicator { position: absolute; inset-block: 3px; inset-inline-start: 3px; width: calc(50% - 3px); border-radius: 0.6rem; background: #0D4D54; transition: transform 250ms ease-in-out; }
+.language-switch-indicator.is-brh { transform: translateX(100%); }
+.language-switch-option { position: relative; z-index: 1; display: grid; place-items: center; min-height: 40px; padding-inline: 0.3rem; border-radius: 0.6rem; color: var(--text-primary); font: inherit; font-size: 0.85rem; transition: color 180ms ease; }
+.language-switch-option:first-of-type { font-family: var(--font-ui) !important; }
+.language-switch-option[aria-checked="true"] { color: white; }
+.language-switch-option:focus-visible { outline: 2px solid #C59B27; outline-offset: -2px; }
+html.locale-brh .language-switch { width: 150px; }
+html.locale-brh .language-switch-option { min-height: 44px; font-size: 17px; line-height: 2; }
+@media (max-width: 639px) { .desktop-language-switch { display: none !important; } }
+.mobile-drawer { animation: drawer-in 190ms ease-out both; }
+@keyframes drawer-in { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) {
+  #site-content, .language-switch-indicator, .language-switch-option { transition-duration: 0.01ms !important; }
+  .menu-popover, .mobile-drawer { animation-duration: 0.01ms !important; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 0.01ms !important; }
+}
 
 ::selection {
   color: #142331;
@@ -37,16 +177,6 @@
   }
 }
 
-@font-face {
-  font-family: 'Jameel Noori Nastaliq';
-  src: local('Jameel Noori Nastaliq'),
-       local('Jameel Noori Nastaleeq'),
-       url('https://cdn.jsdelivr.net/gh/pakistan-digitization/urdu-fonts/Jameel%20Noori%20Nastaleeq.woff2') format('woff2');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
 @layer base {
   :root {
     --bg-page: #FBF9F5;
@@ -65,28 +195,29 @@
   body {
     background-color: var(--bg-page);
     color: var(--text-primary);
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    font-family: var(--font-ui);
     transition: background-color 0.25s ease, color 0.25s ease;
   }
 }
 
 /* Authentic Nastaliq Typography */
 .font-nastaliq {
-  font-family: 'Jameel Noori Nastaliq', 'Jameel Noori Nastaliq Urdu', 'Noto Nastaliq Urdu', 'Urdu Typesetting', 'Mehr Nastaliq Web', serif;
+  font-family: var(--font-nastaliq);
   font-feature-settings: "rlig" 1, "calt" 1;
   text-rendering: optimizeLegibility;
 }
 
 .nastaliq-text {
-  font-family: 'Jameel Noori Nastaliq', 'Jameel Noori Nastaliq Urdu', 'Noto Nastaliq Urdu', 'Urdu Typesetting', 'Mehr Nastaliq Web', serif;
+  font-family: var(--font-nastaliq);
   line-height: 2.35;
   word-spacing: 0.1em;
 }
 
 /* Article Body Typography for Nastaliq */
 .article-prose {
-  font-family: 'Jameel Noori Nastaliq', 'Jameel Noori Nastaliq Urdu', 'Noto Nastaliq Urdu', 'Urdu Typesetting', serif;
-  line-height: 2.15;
+  font-family: var(--font-nastaliq);
+  font-size: clamp(19px, 1.5vw, 22px);
+  line-height: 2.25;
   text-align: right;
   direction: rtl;
 }
@@ -95,10 +226,11 @@
   margin-bottom: 1.35rem;
   text-align: right;
 }
+html.locale-brh .article-prose p { line-height: 2.4; margin-block-end: 1.4rem; }
 
 /* Poem Display Style: Centered line-by-line with generous vertical stanza breaks */
 .poem-container {
-  font-family: 'Jameel Noori Nastaliq', 'Jameel Noori Nastaliq Urdu', 'Noto Nastaliq Urdu', 'Urdu Typesetting', serif;
+  font-family: var(--font-nastaliq);
   line-height: 2.2;
   text-align: center;
   direction: rtl;

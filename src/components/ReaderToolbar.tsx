@@ -12,10 +12,12 @@ import {
   Printer,
   FileText,
 } from "lucide-react";
+import { useLocale } from "@/components/LocaleProvider";
 
 interface ReaderToolbarProps {
   readingTime: number;
   fontSize: number; // in pixels
+  minFontSize?: number;
   setFontSize: (size: number) => void;
   title: string;
   pdfUrl?: string | null;
@@ -25,12 +27,14 @@ interface ReaderToolbarProps {
 export default function ReaderToolbar({
   readingTime,
   fontSize,
+  minFontSize = 16,
   setFontSize,
   title,
   pdfUrl,
   slug,
 }: ReaderToolbarProps) {
   const [copied, setCopied] = useState(false);
+  const { t } = useLocale();
 
   const currentUrl = typeof window !== "undefined" ? window.location.href : `https://brahuitarjuma.org/article/${slug}`;
 
@@ -69,7 +73,7 @@ export default function ReaderToolbar({
         {/* Estimated reading time */}
         <div className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">
           <Clock className="w-4 h-4 text-brand-teal dark:text-teal-400" />
-          <span>{readingTime} min read</span>
+          <span>{readingTime} {t("label.readingTime")}</span>
         </div>
 
         <div className="h-4 w-px bg-gray-300 dark:bg-gray-700 hidden sm:block" />
@@ -77,10 +81,10 @@ export default function ReaderToolbar({
         {/* Font size increase / decrease buttons */}
         <div className="flex items-center gap-1 bg-white dark:bg-[#1A2536] px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 shadow-xs">
           <button
-            onClick={() => setFontSize(Math.max(16, fontSize - 2))}
-            aria-label="Decrease text size"
+            onClick={() => setFontSize(Math.max(minFontSize, fontSize - 2))}
+            aria-label={t("reader.decrease")}
             className="p-1 text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-brand-teal dark:hover:text-teal-400 transition-colors"
-            title="Smaller font"
+            title={t("reader.smaller")}
           >
             A-
           </button>
@@ -89,9 +93,9 @@ export default function ReaderToolbar({
           </span>
           <button
             onClick={() => setFontSize(Math.min(32, fontSize + 2))}
-            aria-label="Increase text size"
+            aria-label={t("reader.increase")}
             className="p-1 text-sm font-bold text-gray-600 dark:text-gray-300 hover:text-brand-teal dark:hover:text-teal-400 transition-colors"
-            title="Larger font"
+            title={t("reader.larger")}
           >
             A+
           </button>
@@ -109,15 +113,15 @@ export default function ReaderToolbar({
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-maroon text-white hover:bg-brand-maroon/90 shadow-sm transition-colors"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Download PDF</span>
+            <span>{t("action.downloadPdf")}</span>
           </a>
         )}
 
         {/* Print / Save as PDF button */}
         <button
           onClick={handlePrint}
-          aria-label="Print article or save as PDF"
-          title="Print / Save PDF"
+          aria-label={t("reader.print")}
+          title={t("reader.printTitle")}
           className="p-2 rounded-lg text-gray-600 dark:text-gray-300 bg-white dark:bg-[#1A2536] hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 transition-colors"
         >
           <Printer className="w-4 h-4" />
@@ -128,8 +132,8 @@ export default function ReaderToolbar({
           {/* WhatsApp */}
           <button
             onClick={handleShareWhatsApp}
-            aria-label="Share on WhatsApp"
-            title="Share to WhatsApp"
+            aria-label={t("reader.shareWhatsapp")}
+            title={t("reader.shareWhatsapp")}
             className="px-2 py-1 text-xs font-medium text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded transition-colors"
           >
             WhatsApp
@@ -138,8 +142,8 @@ export default function ReaderToolbar({
           {/* X / Twitter */}
           <button
             onClick={handleShareX}
-            aria-label="Share on X"
-            title="Share on X"
+            aria-label={t("reader.shareX")}
+            title={t("reader.shareX")}
             className="px-2 py-1 text-xs font-medium text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
           >
             X
@@ -148,8 +152,8 @@ export default function ReaderToolbar({
           {/* Facebook */}
           <button
             onClick={handleShareFacebook}
-            aria-label="Share on Facebook"
-            title="Share on Facebook"
+            aria-label={t("reader.shareFacebook")}
+            title={t("reader.shareFacebook")}
             className="px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded transition-colors"
           >
             FB
@@ -158,17 +162,17 @@ export default function ReaderToolbar({
           {/* Copy Link */}
           <button
             onClick={handleCopyLink}
-            aria-label="Copy link"
-            title="Copy link"
+            aria-label={t("reader.copy")}
+            title={t("reader.copy")}
             className="px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors flex items-center gap-1"
           >
             {copied ? (
               <>
                 <Check className="w-3.5 h-3.5 text-emerald-500" />
-                <span className="text-emerald-500">Copied</span>
+                <span className="text-emerald-500">{t("reader.copied")}</span>
               </>
             ) : (
-              <span>Copy Link</span>
+              <span>{t("reader.copy")}</span>
             )}
           </button>
         </div>

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getWriterBySlug } from "@/lib/data";
+import { cookies } from "next/headers";
+import { normalizeLocale, translate } from "@/lib/i18n";
 import ArticleCard from "@/components/ArticleCard";
 import { ArrowLeft, BookOpen, Feather } from "lucide-react";
 
@@ -13,7 +15,7 @@ interface WriterPageProps {
   };
 }
 
-export const revalidate = 60;
+export const revalidate = 0;
 
 export async function generateMetadata({ params }: WriterPageProps): Promise<Metadata> {
   const { writer } = await getWriterBySlug(params.slug);
@@ -24,26 +26,31 @@ export async function generateMetadata({ params }: WriterPageProps): Promise<Met
   }
 
   return {
-    title: `${writer.name} — Brahui Matt o badal`,
-    description: writer.bio || `Brahui translations of works by ${writer.name}.`,
+    title: writer.name,
+    description: writer.bio || `Brahui writing and translations associated with ${writer.name}.`,
     alternates: {
       canonical: `${siteUrl}/writer/${writer.slug}`,
     },
     openGraph: {
-      title: `${writer.name} — Brahui Matt o badal`,
-      description: writer.bio || `Brahui translations of works by ${writer.name}.`,
-      images: writer.photo_url ? [{ url: writer.photo_url }] : [],
+      title: writer.name,
+      description: writer.bio || `Brahui writing and translations associated with ${writer.name}.`,
+      images: [writer.photo_url ? { url: writer.photo_url } : { url: "/brand/og-image.png", width: 1200, height: 630 }],
     },
   };
 }
 
 export default async function WriterPage({ params }: WriterPageProps) {
+  const locale = normalizeLocale(cookies().get("brahui-locale")?.value);
+  const isBrh = locale === "brh";
+  const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
   const { writer, articles } = await getWriterBySlug(params.slug);
 
   if (!writer) {
     notFound();
   }
 
+  const originalWorks = articles.filter(a => (a.content_type || "translation") === "original");
+  const translations = articles.filter(a => (a.content_type || "translation") === "translation");
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
       {/* Back button */}
@@ -53,7 +60,7 @@ export default async function WriterPage({ params }: WriterPageProps) {
           className="inline-flex items-center gap-2 text-sm font-semibold text-brand-teal dark:text-teal-400 hover:text-brand-teal-light group"
         >
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-          <span>All Writers (غُٹ نوشتہ کار آک)</span>
+          <span>{t("action.allWriters")}</span>
         </Link>
       </div>
 
@@ -80,7 +87,7 @@ export default async function WriterPage({ params }: WriterPageProps) {
           <div className="space-y-4 text-center sm:text-left flex-1">
             <div>
               <span className="text-xs font-semibold uppercase tracking-wider text-brand-teal dark:text-teal-400">
-                Author Archive
+              {isBrh ? "نوشتہ کار نا فہرست" : "Author Archive"}
               </span>
               <h1 className="text-3xl sm:text-4xl font-bold font-serif text-gray-900 dark:text-gray-100 mt-1">
                 {writer.name}
@@ -95,37 +102,34 @@ export default async function WriterPage({ params }: WriterPageProps) {
 
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-brand-gold/20 text-brand-teal dark:text-amber-300">
               <BookOpen className="w-3.5 h-3.5" />
-              <span>{articles.length} Brahui Translation{articles.length === 1 ? "" : "s"}</span>
+              <span>{articles.length} {isBrh ? "شائعیں مٹ و بدل" : `Published Work${articles.length === 1 ? "" : "s"}`}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Translated Articles by this Writer */}
-      <div className="space-y-8">
+      {/* Works grouped by type */}
+      <div className="space-y-12">{[{title:t("writer.originalGroup"),items:originalWorks},{title:t("writer.translatedGroup"),items:translations}].map(group => <section key={group.title} className="space-y-6">
         <div className="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-gray-800">
           <h2 className="text-2xl font-bold font-serif text-gray-900 dark:text-gray-100">
-            Translations of {writer.name.split("(")[0].trim()}
+            {group.title}
           </h2>
-          <span className="font-nastaliq text-xl text-brand-gold dark:text-amber-400" dir="rtl">
-            براہوئی مٹ و بدل
-          </span>
         </div>
 
-        {articles.length > 0 ? (
+        {group.items.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {articles.map((art) => (
+            {group.items.map((art) => (
               <ArticleCard key={art.id} article={art} />
             ))}
           </div>
         ) : (
           <div className="text-center py-12 bg-white dark:bg-[#17212F] rounded-2xl border border-[#E8E2D9] dark:border-[#243245] p-8">
             <p className="text-gray-600 dark:text-gray-300">
-              No translated works have been published for this author yet.
+              {t("empty.results")}
             </p>
           </div>
         )}
-      </div>
+      </section>)}</div>
     </div>
   );
 }

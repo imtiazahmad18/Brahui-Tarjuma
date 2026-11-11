@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getArticleBySlug } from "@/lib/data";
 import { ArrowLeft, BookOpen, Quote, ExternalLink } from "lucide-react";
+import { cookies } from "next/headers";
+import { normalizeLocale, translate } from "@/lib/i18n";
 
 interface OriginalPageProps {
   params: {
@@ -21,8 +23,9 @@ export async function generateMetadata({ params }: OriginalPageProps): Promise<M
     };
   }
 
+  if (article.content_type === "original") return { title: "Original Text Not Found", robots: { index: false, follow: false } };
   return {
-    title: `Original Text: ${article.original_title || article.title} — Brahui Matt o badal`,
+    title: `Original Text: ${article.original_title || article.title}`,
     description: `Original source text for ${article.title} translated into Brahui.`,
     robots: {
       index: false, // Ensure Google ranks the Brahui translation page, not the original text copy!
@@ -35,15 +38,17 @@ export async function generateMetadata({ params }: OriginalPageProps): Promise<M
 }
 
 export default async function OriginalTextPage({ params }: OriginalPageProps) {
+  const locale = normalizeLocale(cookies().get("brahui-locale")?.value);
+  const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
   const article = await getArticleBySlug(params.slug);
 
-  if (!article || !article.original_text) {
+  if (!article || article.content_type === "original" || !article.original_text) {
     notFound();
   }
 
   const isRtl = article.original_dir === "rtl";
   const lang = article.original_lang || (isRtl ? "ur" : "en");
-  const writerName = article.writer ? article.writer.name : "Original Author";
+  const writerName = article.writer ? article.writer.name : t("article.unknown");
   const paragraphs = article.original_text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
 
   return (
@@ -55,7 +60,7 @@ export default async function OriginalTextPage({ params }: OriginalPageProps) {
           className="inline-flex items-center gap-2 text-sm font-semibold text-brand-teal dark:text-teal-400 hover:text-brand-teal-light group"
         >
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-          <span>Back to Brahui Translation (براہوئی مٹ و بدل)</span>
+          <span>{t("original.back")}</span>
         </Link>
       </div>
 
@@ -63,7 +68,7 @@ export default async function OriginalTextPage({ params }: OriginalPageProps) {
       <header className="bg-white dark:bg-[#17212F] rounded-2xl border border-[#E8E2D9] dark:border-[#243245] p-6 sm:p-8 mb-8 shadow-sm">
         <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-brand-gold dark:text-amber-400 mb-2">
           <Quote className="w-4 h-4" />
-          <span>Original Source Text</span>
+          <span>{t("original.heading")}</span>
         </div>
 
         {/* Original Title */}
@@ -80,18 +85,18 @@ export default async function OriginalTextPage({ params }: OriginalPageProps) {
         {/* Writer and Citation metadata */}
         <div className="pt-4 border-t border-gray-100 dark:border-gray-800 flex flex-wrap items-center justify-between gap-3 text-sm text-gray-600 dark:text-gray-400">
           <div>
-            <span>Author: </span>
+            <span>{t("original.author")}: </span>
             <strong className="text-gray-900 dark:text-gray-200">{writerName}</strong>
           </div>
 
           {article.source_credit && (
             <div className="italic text-xs sm:text-sm">
-              Source: {article.source_credit}
+              {t("original.source")}: {article.source_credit}
             </div>
           )}
 
           <div className="text-xs bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded font-mono">
-            Lang: {lang.toUpperCase()} • Dir: {isRtl ? "RTL" : "LTR"}
+            {t("original.language")}: {lang.toUpperCase()} • {t("original.direction")}: {isRtl ? "RTL" : "LTR"}
           </div>
         </div>
       </header>
@@ -120,7 +125,7 @@ export default async function OriginalTextPage({ params }: OriginalPageProps) {
           className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl text-sm font-semibold bg-brand-teal text-white hover:bg-brand-teal-light shadow-sm transition-all"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Return to Brahui Translation (براہوئی مٹ)</span>
+          <span>{t("original.back")}</span>
         </Link>
       </div>
     </div>

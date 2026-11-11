@@ -6,6 +6,9 @@ import { getArticlesByCategory } from "@/lib/data";
 import ArticleCard from "@/components/ArticleCard";
 import { CATEGORIES, CategorySlug } from "@/types";
 import { BookOpen, ChevronLeft, ChevronRight } from "lucide-react";
+import { cookies } from "next/headers";
+import { normalizeLocale, translate } from "@/lib/i18n";
+import { getCategoryBrahuiNames } from "@/lib/data";
 
 interface CategoryPageProps {
   params: {
@@ -13,10 +16,11 @@ interface CategoryPageProps {
   };
   searchParams?: {
     page?: string;
+    type?: "all" | "original" | "translation";
   };
 }
 
-export const revalidate = 60;
+export const revalidate = 0;
 
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
   let catSlug = params.category.toLowerCase();
@@ -30,13 +34,13 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://brahuitarjuma.org";
 
   return {
-      title: `${category.englishName} (${category.urduName}) — Brahui Matt o badal`,
+      title: `${category.englishName} (${category.urduName})`,
     description: category.description,
     alternates: {
       canonical: `${siteUrl}/category/${category.slug}`,
     },
     openGraph: {
-      title: `${category.englishName} (${category.urduName}) — Brahui Matt o badal`,
+      title: `${category.englishName} (${category.urduName})`,
       description: category.description,
       url: `${siteUrl}/category/${category.slug}`,
     },
@@ -53,12 +57,22 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
     notFound();
   }
 
+  const locale = normalizeLocale(cookies().get("brahui-locale")?.value);
+  const isBrh = locale === "brh";
+  const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
+  const categoryNames = isBrh ? await getCategoryBrahuiNames() : {};
+  const categoryName = isBrh
+    ? categoryNames[catSlug] || categoryInfo.name_brh || categoryInfo.urduName || categoryInfo.englishName
+    : categoryInfo.englishName;
+
   const currentPage = Number(searchParams?.page || 1);
   const pageSize = 12;
+  const contentType = searchParams?.type === "original" || searchParams?.type === "translation" ? searchParams.type : undefined;
   const { articles, total } = await getArticlesByCategory(
     catSlug as CategorySlug,
     currentPage,
-    pageSize
+    pageSize,
+    contentType
   );
 
   const totalPages = Math.ceil(total / pageSize) || 1;
@@ -69,28 +83,23 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
       <div className="bg-white dark:bg-[#17212F] rounded-2xl border border-[#E8E2D9] dark:border-[#243245] p-8 sm:p-12 mb-12 shadow-sm text-center">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-brand-teal/10 dark:bg-brand-teal/20 text-brand-teal dark:text-teal-300 uppercase tracking-wider mb-4">
           <BookOpen className="w-3.5 h-3.5" />
-          <span>Category Archive</span>
+          <span>{t("label.category")}</span>
         </div>
 
-        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold font-serif text-gray-900 dark:text-gray-100 mb-2">
-          {categoryInfo.englishName}
+        <h1 dir={isBrh ? "rtl" : "ltr"} lang={isBrh ? "brh" : "en"} className={`text-3xl sm:text-4xl md:text-5xl font-bold ${isBrh ? "font-nastaliq" : "font-serif"} text-gray-900 dark:text-gray-100 mb-2`}>
+          {categoryName}
         </h1>
 
-        <div dir="rtl" lang="brh" className="py-2">
-          <span className="font-nastaliq text-3xl sm:text-4xl leading-nastaliq text-brand-gold dark:text-amber-400 font-bold">
-            {categoryInfo.urduName}
-          </span>
-        </div>
-
-        <p className="text-gray-600 dark:text-gray-300 max-w-xl mx-auto text-base sm:text-lg mt-2">
+        {!isBrh && <p className="text-gray-600 dark:text-gray-300 max-w-xl mx-auto text-base sm:text-lg mt-2">
           {categoryInfo.description}
-        </p>
+        </p>}
 
-        <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
-          Showing {articles.length} of {total} translation{total === 1 ? "" : "s"}
-        </div>
+        {!isBrh && <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+          Showing {articles.length} of {total} works
+        </div>}
       </div>
 
+      <nav className="flex gap-2 mb-6">{[{v:"all",label:t("filter.all")},{v:"original",label:t("filter.original")},{v:"translation",label:t("filter.translation")}].map(x=><Link key={x.v} href={`/category/${catSlug}?type=${x.v}`} className={`px-4 py-2 rounded-lg border ${((contentType||"all")===x.v)?"bg-brand-teal text-white":"bg-white dark:bg-[#17212F]"}`}>{x.label}</Link>)}</nav>
       {/* Articles Grid */}
       {articles.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -100,18 +109,15 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
         </div>
       ) : (
         <div className="text-center py-16 bg-white dark:bg-[#17212F] rounded-2xl border border-[#E8E2D9] dark:border-[#243245] p-8">
-          <p className="text-lg text-gray-600 dark:text-gray-300 mb-4">
-            No translations published in this category yet.
-          </p>
-          <p dir="rtl" className="font-nastaliq text-xl text-brand-gold">
-            دا کیٹیگری ٹی دسکا اسہ نوشت اس ہم شینک متنے۔
+          <p dir={isBrh ? "rtl" : "ltr"} lang={isBrh ? "brh" : "en"} className={`${isBrh ? "font-nastaliq" : ""} text-lg text-gray-600 dark:text-gray-300 mb-4`}>
+            {isBrh ? t("empty.results") : "No works published in this category yet."}
           </p>
           <div className="mt-6">
             <Link
               href="/"
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-brand-teal text-white hover:bg-brand-teal-light"
             >
-              Return to Homepage
+              {t("error.backHome")}
             </Link>
           </div>
         </div>
@@ -122,24 +128,24 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
         <div className="mt-12 flex items-center justify-center gap-4">
           {currentPage > 1 && (
             <Link
-              href={`/category/${catSlug}?page=${currentPage - 1}`}
+              href={`/category/${catSlug}?page=${currentPage - 1}&type=${contentType || "all"}`}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-white dark:bg-[#17212F] border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-brand-teal transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
-              <span>Previous</span>
+              <span>{t("pagination.previous")}</span>
             </Link>
           )}
 
           <span className="text-sm text-gray-600 dark:text-gray-400">
-            Page {currentPage} of {totalPages}
+            {t("pagination.page")} {currentPage} / {totalPages}
           </span>
 
           {currentPage < totalPages && (
             <Link
-              href={`/category/${catSlug}?page=${currentPage + 1}`}
+              href={`/category/${catSlug}?page=${currentPage + 1}&type=${contentType || "all"}`}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-white dark:bg-[#17212F] border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-brand-teal transition-colors"
             >
-              <span>Next</span>
+              <span>{t("pagination.next")}</span>
               <ChevronRight className="w-4 h-4" />
             </Link>
           )}

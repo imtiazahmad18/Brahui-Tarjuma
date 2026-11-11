@@ -4,9 +4,11 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
-import { Article, CategorySlug, Chapter, Writer, CATEGORIES } from "@/types";
+import { Article, CategorySlug, Chapter, Writer, CATEGORY_CHILDREN, CATEGORY_NODES, CATEGORY_BY_SLUG, categoryPath } from "@/types";
 import { generateSlug, formatDate } from "@/lib/utils";
 import ArticleRenderer from "@/components/ArticleRenderer";
+import Logo from "@/components/Logo";
+import { SITE_NAME } from "@/lib/brand";
 import {
   Lock,
   LogOut,
@@ -45,7 +47,7 @@ export default function AdminPage() {
   const [recoveryBusy, setRecoveryBusy] = useState(false);
 
   // Navigation tab in admin
-  const [activeTab, setActiveTab] = useState<"articles" | "editor" | "writers" | "messages">("articles");
+  const [activeTab, setActiveTab] = useState<"originals" | "translations" | "editor" | "writers" | "messages">("translations");
 
   // Data states
   const [articles, setArticles] = useState<Article[]>([]);
@@ -55,19 +57,30 @@ export default function AdminPage() {
   const [contactMessagesError, setContactMessagesError] = useState("");
   const [searchFilter, setSearchFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "draft" | "published">("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [sectionFilter, setSectionFilter] = useState<"all" | "poetry" | "prose">("all");
+  const [categoryRows, setCategoryRows] = useState<Array<{id:string;slug:string;name_en:string;name_ur:string;parent_id:string|null;level:number;sort_order:number}>>([]);
 
   // Form State for editing or creating article
   const [editingArticleId, setEditingArticleId] = useState<string | null>(null);
   const [formData, setFormData] = useState<{
+    content_type: "translation" | "original";
     title: string;
     subtitle: string;
     slug: string;
+    section: "poetry" | "prose";
+    prose_group: "fiction" | "non-fiction";
+    nazm_subcategory: "prose-poem" | "free-verse" | "blank-verse" | "";
     category: CategorySlug;
+    is_featured: boolean;
     original_writer_name: string;
     original_title: string;
     translator_name: string;
     cover_image_url: string;
     cover_alt: string;
+    fiction_form: "short_story" | "novel" | "other";
+    references_text: string;
+    published_at: string;
     body: string;
     original_text: string;
     original_lang: string;
@@ -78,15 +91,23 @@ export default function AdminPage() {
     status: "draft" | "published";
     chapters: Chapter[];
   }>({
+    content_type: "translation",
     title: "",
     subtitle: "",
     slug: "",
-    category: "fiction",
+    section: "prose",
+    prose_group: "fiction",
+    nazm_subcategory: "",
+    category: "short-story",
+    is_featured: false,
     original_writer_name: "",
     original_title: "",
     translator_name: "",
-    cover_image_url: "/brand-logo-circle.png",
+    cover_image_url: "/brand/logo.png",
     cover_alt: "",
+    fiction_form: "short_story",
+    references_text: "",
+    published_at: "",
     body: "",
     original_text: "",
     original_lang: "en",
@@ -158,22 +179,22 @@ export default function AdminPage() {
     async function loadData() {
       if (isSupabaseConfigured) {
         try {
-          const [articlesResult, writersResult] = await Promise.all([
-            supabase
-              .from("articles")
-              .select(`*, writer:writers(*), chapters(*)`)
-              .order("created_at", { ascending: false }),
+          const [articlesResult, writersResult, categoriesResult] = await Promise.all([
+            supabase.from("articles").select(`*, writer:writers(*), chapters(*), category_info:categories(*)`).order("created_at", { ascending: false }),
             supabase.from("writers").select("*"),
+            supabase.from("categories").select("*").order("level").order("sort_order"),
           ]);
-
           if (articlesResult.error) throw articlesResult.error;
           if (writersResult.error) throw writersResult.error;
+          if (categoriesResult.error) throw categoriesResult.error;
           setArticles(articlesResult.data || []);
           setWriters(writersResult.data || []);
+          setCategoryRows(categoriesResult.data || []);
         } catch (e) {
           console.warn("Supabase load error:", e);
           setArticles([]);
           setWriters([]);
+          setCategoryRows([]);
         }
       } else {
         setArticles([]);
@@ -303,18 +324,26 @@ export default function AdminPage() {
   };
 
   // Article creation / editing handlers
-  const handleStartNewArticle = () => {
+  const handleStartNewArticle = (contentType: "translation" | "original" = "translation") => {
     setEditingArticleId(null);
     setFormData({
+      content_type: contentType,
       title: "",
       subtitle: "",
       slug: "",
-      category: "fiction",
+      section: "prose",
+      prose_group: "fiction",
+      nazm_subcategory: "",
+      category: "short-story",
+      is_featured: false,
       original_writer_name: "",
       original_title: "",
       translator_name: "",
-      cover_image_url: "/brand-logo-circle.png",
+      cover_image_url: "/brand/logo.png",
       cover_alt: "",
+      fiction_form: "short_story",
+      references_text: "",
+      published_at: "",
       body: "",
       original_text: "",
       original_lang: "en",
@@ -330,16 +359,29 @@ export default function AdminPage() {
 
   const handleEditArticle = (art: Article) => {
     setEditingArticleId(art.id);
+    const selectedSlug = art.category_info?.slug || art.category;
+    const selectedPath = categoryPath(selectedSlug);
+    const selectedSection = selectedPath.some((item) => item.slug === "poetry") ? "poetry" : "prose";
+    const hasNazmSubtype = selectedPath.some((item) => item.slug === "nazm") && selectedSlug !== "nazm";
+    const selectedGroup = selectedPath.find((item) => item.slug === "fiction" || item.slug === "non-fiction")?.slug === "non-fiction" ? "non-fiction" : "fiction";
     setFormData({
+      content_type: art.content_type || "translation",
       title: art.title,
       subtitle: art.subtitle || "",
       slug: art.slug,
-      category: art.category,
+      section: selectedSection,
+      prose_group: selectedGroup,
+      nazm_subcategory: hasNazmSubtype ? selectedSlug as "prose-poem" | "free-verse" | "blank-verse" : "",
+      category: (hasNazmSubtype ? "nazm" : selectedSlug) as CategorySlug,
+      is_featured: Boolean(art.is_featured),
       original_writer_name: art.writer?.name || "",
       original_title: art.original_title || "",
       translator_name: art.translator_name || "",
-      cover_image_url: art.cover_image_url || "/brand-logo-circle.png",
+      cover_image_url: art.cover_image_url || "/brand/logo.png",
       cover_alt: art.cover_alt || "",
+      fiction_form: art.fiction_form || "short_story",
+      references_text: art.references_text || "",
+      published_at: art.published_at ? new Date(art.published_at).toISOString().slice(0,16) : "",
       body: art.body,
       original_text: art.original_text || "",
       original_lang: art.original_lang || "en",
@@ -431,16 +473,26 @@ export default function AdminPage() {
       alert("Title in Brahui is required!");
       return;
     }
-    if (!formData.original_writer_name.trim()) {
+    if (formData.content_type === "translation" && !formData.original_writer_name.trim()) {
       alert("Original writer name is required!");
       return;
     }
+    if (formData.content_type === "original" && (!formData.cover_image_url || formData.cover_image_url.includes("/brand/logo.png"))) { alert("A cover image is required for original writing."); return; }
     if (!formData.body.trim()) {
       alert("Brahui body text is required!");
       return;
     }
 
     const statusToSave = newStatus || formData.status;
+    const selectedCategorySlug = formData.section === "poetry"
+      ? (formData.category === "nazm" ? formData.nazm_subcategory : formData.category)
+      : formData.category;
+    const selectedCategory = CATEGORY_BY_SLUG(selectedCategorySlug);
+    if (!selectedCategory || selectedCategory.kind === "section" || selectedCategory.kind === "group" || (selectedCategory.slug === "nazm")) {
+      alert("Choose a leaf category before saving."); return;
+    }
+    const categoryRecord = categoryRows.find((row) => row.slug === selectedCategorySlug);
+    if (isSupabaseConfigured && !categoryRecord) { alert("Run migration-taxonomy.sql in Supabase before saving work in the new taxonomy."); return; }
     const finalSlug = formData.slug || generateSlug(formData.title);
 
     // Find or create writer
@@ -457,7 +509,8 @@ export default function AdminPage() {
           .insert({
             name: formData.original_writer_name,
             slug: generateSlug(formData.original_writer_name),
-            bio: `Original author of translated work ${formData.original_title || ""}`,
+            bio: formData.content_type === "original" ? "" : `Original author of translated work ${formData.original_title || ""}`,
+            writer_type: formData.content_type === "original" ? "brahui" : "foreign",
           })
           .select()
           .single();
@@ -476,13 +529,17 @@ export default function AdminPage() {
     }
 
     const articlePayload: Article = {
+      content_type: formData.content_type,
       id: editingArticleId || `art-${Date.now()}`,
       title: formData.title,
       subtitle: formData.subtitle || null,
       slug: finalSlug,
-      category: formData.category,
+      category: selectedCategorySlug as CategorySlug,
+      category_id: categoryRecord?.id || null,
+      category_info: selectedCategory,
+      is_featured: formData.is_featured,
       body: formData.body,
-      cover_image_url: formData.cover_image_url || "/brand-logo-circle.png",
+      cover_image_url: formData.cover_image_url || "/brand/logo.png",
       cover_alt: formData.cover_alt || formData.title,
       writer_id: writerId,
       writer: matchedWriter || {
@@ -490,16 +547,16 @@ export default function AdminPage() {
         name: formData.original_writer_name,
         slug: generateSlug(formData.original_writer_name),
       },
-      original_title: formData.original_title || null,
-      original_text: formData.original_text || null,
-      original_lang: formData.original_lang || "en",
-      original_dir: formData.original_dir || "ltr",
-      source_credit: formData.source_credit || null,
-      translator_name: formData.translator_name || null,
+      original_title: formData.content_type === "original" ? null : (formData.original_title || null),
+      original_text: formData.content_type === "original" ? null : (formData.original_text || null),
+      original_lang: formData.content_type === "original" ? null : (formData.original_lang || "en"),
+      original_dir: formData.content_type === "original" ? null : (formData.original_dir || "ltr"),
+      source_credit: formData.content_type === "original" ? null : (formData.source_credit || null),
+      translator_name: formData.content_type === "original" ? null : (formData.translator_name || null),
       pdf_url: formData.pdf_url || null,
       meta_description: formData.meta_description || formData.body.slice(0, 150),
       status: statusToSave,
-      published_at: statusToSave === "published" ? new Date().toISOString() : null,
+      published_at: statusToSave === "published" ? (formData.published_at ? new Date(formData.published_at).toISOString() : new Date().toISOString()) : null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       chapters: formData.chapters,
@@ -512,10 +569,13 @@ export default function AdminPage() {
           const { error } = await supabase
             .from("articles")
             .update({
+              content_type: articlePayload.content_type,
               title: articlePayload.title,
               subtitle: articlePayload.subtitle,
               slug: articlePayload.slug,
               category: articlePayload.category,
+              category_id: categoryRecord?.id,
+              is_featured: articlePayload.is_featured,
               body: articlePayload.body,
               cover_image_url: articlePayload.cover_image_url,
               cover_alt: articlePayload.cover_alt,
@@ -525,7 +585,10 @@ export default function AdminPage() {
               original_lang: articlePayload.original_lang,
               original_dir: articlePayload.original_dir,
               source_credit: articlePayload.source_credit,
-              translator_name: articlePayload.translator_name,
+              translator_name: formData.content_type === "original" ? null : articlePayload.translator_name,
+              translator_title: formData.content_type === "original" ? null : articlePayload.title,
+              fiction_form: formData.content_type === "original" ? (articlePayload.category === "novel" ? "novel" : null) : null,
+              references_text: articlePayload.category === "research" ? formData.references_text : null,
               pdf_url: articlePayload.pdf_url,
               meta_description: articlePayload.meta_description,
               status: articlePayload.status,
@@ -539,10 +602,13 @@ export default function AdminPage() {
           const { data: inserted, error } = await supabase
             .from("articles")
             .insert({
+              content_type: articlePayload.content_type,
               title: articlePayload.title,
               subtitle: articlePayload.subtitle,
               slug: articlePayload.slug,
               category: articlePayload.category,
+              category_id: categoryRecord?.id,
+              is_featured: articlePayload.is_featured,
               body: articlePayload.body,
               cover_image_url: articlePayload.cover_image_url,
               cover_alt: articlePayload.cover_alt,
@@ -552,7 +618,10 @@ export default function AdminPage() {
               original_lang: articlePayload.original_lang,
               original_dir: articlePayload.original_dir,
               source_credit: articlePayload.source_credit,
-              translator_name: articlePayload.translator_name,
+              translator_name: formData.content_type === "original" ? null : articlePayload.translator_name,
+              translator_title: formData.content_type === "original" ? null : articlePayload.title,
+              fiction_form: formData.content_type === "original" ? (articlePayload.category === "novel" ? "novel" : null) : null,
+              references_text: articlePayload.category === "research" ? formData.references_text : null,
               pdf_url: articlePayload.pdf_url,
               meta_description: articlePayload.meta_description,
               status: articlePayload.status,
@@ -608,7 +677,7 @@ export default function AdminPage() {
         ? "Article published and instantly live on website!"
         : "Article draft saved successfully."
     );
-    setActiveTab("articles");
+    setActiveTab(formData.content_type === "original" ? "originals" : "translations");
   };
 
   // Image upload handler to Supabase storage
@@ -655,6 +724,8 @@ export default function AdminPage() {
       notifySuccess("Local image selected for preview.");
     }
   };
+
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => { const file=e.target.files?.[0]; if(!file)return; if(!isSupabaseConfigured){alert("Configure Supabase before uploading PDFs.");return;} try { const path=`pdfs/${Date.now()}-${Math.random().toString(36).slice(2)}.pdf`; const {error}=await supabase.storage.from("pdfs").upload(path,file,{contentType:"application/pdf"}); if(error)throw error; const {data}=supabase.storage.from("pdfs").getPublicUrl(path); setFormData(prev=>({...prev,pdf_url:data.publicUrl})); notifySuccess("PDF uploaded to Supabase Storage."); } catch(err:any){alert(`Could not upload PDF: ${err.message||"Upload failed"}`);} };
 
   const handleWriterPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.currentTarget;
@@ -781,21 +852,12 @@ export default function AdminPage() {
       <div className="max-w-md mx-auto px-4 py-20">
         <div className="bg-white dark:bg-[#17212F] rounded-2xl border border-[#E8E2D9] dark:border-[#243245] p-8 shadow-sm">
           <div className="text-center mb-8">
-            <div className="relative w-40 h-40 rounded-full overflow-hidden mx-auto mb-4">
-              <Image
-                src="/brand-logo-circle.png"
-                alt="Brahui Matt o badal"
-                fill
-                sizes="160px"
-                unoptimized
-                className="object-contain"
-              />
-            </div>
+            <div className="flex justify-center mx-auto mb-4"><Logo width={260} height={204} sizes="260px" /></div>
             <h1 className="text-2xl font-bold font-serif text-gray-900 dark:text-gray-100">
-              Admin Portal
+              {SITE_NAME} Admin Portal
             </h1>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Single-owner administration for Brahui Matt o badal
+              Single-owner administration for {SITE_NAME}
             </p>
           </div>
 
@@ -881,13 +943,16 @@ export default function AdminPage() {
 
   // 2. AUTHENTICATED ADMIN DASHBOARD
   const filteredArticles = articles.filter((art) => {
+    const itemType = art.content_type || "translation";
+    const matchesType = (activeTab === "originals" && itemType === "original") || (activeTab === "translations" && itemType === "translation");
+    const itemSection = categoryPath(art.category_info?.slug || art.category).some(n => n.slug === "poetry") ? "poetry" : "prose";
     const matchesStatus = statusFilter === "all" || art.status === statusFilter;
     const matchesSearch =
       !searchFilter.trim() ||
       art.title.toLowerCase().includes(searchFilter.toLowerCase()) ||
       art.slug.toLowerCase().includes(searchFilter.toLowerCase()) ||
       (art.writer?.name && art.writer.name.toLowerCase().includes(searchFilter.toLowerCase()));
-    return matchesStatus && matchesSearch;
+    return matchesType && matchesStatus && matchesSearch && (categoryFilter === "all" || art.category === categoryFilter) && (sectionFilter === "all" || itemSection === sectionFilter);
   });
 
   return (
@@ -895,12 +960,10 @@ export default function AdminPage() {
       {/* Top Admin Header Bar */}
       <div className="bg-white dark:bg-[#17212F] rounded-2xl border border-[#E8E2D9] dark:border-[#243245] p-5 sm:p-6 mb-8 shadow-sm flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="relative w-14 h-14 shrink-0 rounded-full overflow-hidden">
-            <Image src="/brand-logo-circle.png" alt="Brahui Matt o badal logo" fill sizes="56px" unoptimized className="object-contain" />
-          </div>
+          <Logo width={68} height={54} sizes="68px" className="shrink-0" />
           <div>
             <h1 className="text-xl font-bold font-serif text-gray-900 dark:text-gray-100">
-              Brahui Matt o badal Admin Desk
+              {SITE_NAME} Admin Desk
             </h1>
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Signed in as: <span className="font-semibold">{session.user?.email || "Editor"}</span>
@@ -909,13 +972,8 @@ export default function AdminPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleStartNewArticle}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-brand-teal text-white hover:bg-brand-teal-light shadow-sm transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            <span>New Translation</span>
-          </button>
+          <button onClick={() => handleStartNewArticle("original")} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-brand-gold text-white hover:opacity-90"><Plus className="w-4 h-4" /><span>New Brahui Adab</span></button>
+          <button onClick={() => handleStartNewArticle("translation")} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-brand-teal text-white hover:bg-brand-teal-light"><Plus className="w-4 h-4" /><span>New Translated Adab</span></button>
 
           <button
             onClick={handleLogout}
@@ -938,17 +996,18 @@ export default function AdminPage() {
       {/* Navigation Tabs */}
       <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-800 mb-8 overflow-x-auto pb-2">
         <button
-          onClick={() => setActiveTab("articles")}
+          onClick={() => setActiveTab("originals")}
           className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 ${
-            activeTab === "articles"
+            activeTab === "originals"
               ? "bg-brand-teal text-white shadow-sm"
               : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
           }`}
         >
           <FileText className="w-4 h-4" />
-          <span>Articles ({articles.length})</span>
+          <span>Brahui Adab ({articles.filter(a => a.content_type === "original").length})</span>
         </button>
 
+        <button onClick={() => setActiveTab("translations")} className={`px-4 py-2 rounded-lg text-sm font-semibold ${activeTab === "translations" ? "bg-brand-teal text-white" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"}`}><FileText className="w-4 h-4 inline mr-2"/><span>Translated Adab ({articles.filter(a => (a.content_type || "translation") === "translation").length})</span></button>
         <button
           onClick={() => setActiveTab("editor")}
           className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 ${
@@ -958,7 +1017,7 @@ export default function AdminPage() {
           }`}
         >
           <Edit className="w-4 h-4" />
-          <span>{editingArticleId ? "Edit Article" : "New Article Form"}</span>
+          <span>{editingArticleId ? "Edit Work" : "New Work Form"}</span>
         </button>
 
         <button
@@ -989,7 +1048,7 @@ export default function AdminPage() {
       {/* ======================================================== */}
       {/* TAB 1: ARTICLES LIST / DASHBOARD */}
       {/* ======================================================== */}
-      {activeTab === "articles" && (
+      {(activeTab === "originals" || activeTab === "translations") && (
         <div className="space-y-6">
           {/* Controls: Search and Status Filters */}
           <div className="flex flex-col sm:flex-row gap-4 justify-between items-center bg-white dark:bg-[#17212F] p-4 rounded-xl border border-[#E8E2D9] dark:border-[#243245]">
@@ -1005,7 +1064,7 @@ export default function AdminPage() {
             </div>
 
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <span className="text-xs text-gray-500">Status:</span>
+              <select value={sectionFilter} onChange={e=>setSectionFilter(e.target.value as "all"|"poetry"|"prose")} className="px-2 py-1 text-xs rounded-lg border bg-white dark:bg-gray-800"><option value="all">All sections</option><option value="poetry">Poetry</option><option value="prose">Prose</option></select><select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} className="px-2 py-1 text-xs rounded-lg border bg-white dark:bg-gray-800"><option value="all">All categories</option>{CATEGORY_NODES.filter(c=>c.kind==="category"||c.kind==="subcategory").map(c => <option key={c.slug} value={c.slug}>{categoryPath(c.slug).map(x=>x.englishName).join(" > ")}</option>)}</select><span className="text-xs text-gray-500">Status:</span>
               <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 p-0.5 bg-gray-50 dark:bg-gray-800">
                 {(["all", "published", "draft"] as const).map((st) => (
                   <button
@@ -1032,8 +1091,8 @@ export default function AdminPage() {
                   <tr>
                     <th className="px-6 py-3.5">Title (Brahui)</th>
                     <th className="px-6 py-3.5">Category</th>
-                    <th className="px-6 py-3.5">Original Author</th>
-                    <th className="px-6 py-3.5">Translator</th>
+                    <th className="px-6 py-3.5">{activeTab === "originals" ? "Brahui Author" : "Original Author"}</th>
+                    {activeTab === "translations" && <th className="px-6 py-3.5">Translator</th>}
                     <th className="px-6 py-3.5">Status</th>
                     <th className="px-6 py-3.5">Published</th>
                     <th className="px-6 py-3.5 text-right">Actions</th>
@@ -1059,9 +1118,7 @@ export default function AdminPage() {
                         {art.writer ? art.writer.name.split("(")[0].trim() : "Unknown"}
                       </td>
 
-                      <td className="px-6 py-4 text-xs text-gray-600 dark:text-gray-400 font-nastaliq" dir="rtl">
-                        {art.translator_name || "—"}
-                      </td>
+                      {activeTab === "translations" && <td className="px-6 py-4 text-xs text-gray-600 dark:text-gray-400 font-nastaliq" dir="rtl">{art.translator_name || "—"}</td>}
 
                       <td className="px-6 py-4">
                         <span
@@ -1084,7 +1141,7 @@ export default function AdminPage() {
                           href={`/article/${art.slug}`}
                           target="_blank"
                           className="p-1.5 text-gray-500 hover:text-brand-teal transition-colors inline-block"
-                          title="View live translation"
+                          title="Preview published work"
                         >
                           <Eye className="w-4 h-4" />
                         </Link>
@@ -1128,7 +1185,7 @@ export default function AdminPage() {
           <div className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-800">
             <div>
               <h2 className="text-xl font-bold font-serif text-gray-900 dark:text-gray-100">
-                {editingArticleId ? "Edit Translation Article" : "Create New Translation Article"}
+                {editingArticleId ? `Edit ${formData.content_type === "original" ? "Brahui Adab" : "Translated Adab"}` : `Create New ${formData.content_type === "original" ? "Brahui Adab" : "Translated Adab"}`}
               </h2>
               <p className="text-xs text-gray-500 mt-1">
                 Fill in the details below. Brahui text renders in authentic Nastaliq script.
@@ -1136,6 +1193,8 @@ export default function AdminPage() {
             </div>
 
             <div className="flex items-center gap-2">
+              {editingArticleId && <button type="button" onClick={() => handleDeleteArticle(editingArticleId, formData.title)} className="px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50">Delete</button>}
+              <button type="button" onClick={() => document.getElementById("work-live-preview")?.scrollIntoView({behavior:"smooth",block:"center"})} className="px-3 py-2 rounded-xl text-xs font-semibold border border-gray-300 dark:border-gray-700">Preview</button>
               <button
                 type="button"
                 onClick={() => handleSaveArticle("draft")}
@@ -1150,7 +1209,7 @@ export default function AdminPage() {
                 className="px-5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-brand-teal text-white hover:bg-brand-teal-light shadow-sm transition-all flex items-center gap-1.5"
               >
                 <Sparkles className="w-4 h-4 text-brand-gold" />
-                <span>Publish Translation</span>
+                <span>{formData.content_type === "original" ? "Publish Brahui Adab" : "Publish Translated Adab"}</span>
               </button>
             </div>
           </div>
@@ -1190,58 +1249,33 @@ export default function AdminPage() {
                 />
               </div>
 
-              {/* URL Slug & Category */}
+              {/* URL slug and cascading taxonomy */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1">
-                    URL Slug <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.slug}
-                    onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                    placeholder="your-article-slug"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-[#FBF9F5] dark:bg-[#0F1722] text-xs sm:text-sm font-mono text-gray-900 dark:text-gray-100 focus:outline-none focus:border-brand-teal"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1">
-                    Category <span className="text-rose-500">*</span>
-                  </label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value as CategorySlug })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-[#FBF9F5] dark:bg-[#0F1722] text-xs sm:text-sm font-semibold text-gray-900 dark:text-gray-100 focus:outline-none focus:border-brand-teal"
-                  >
-                    <option value="fiction">Fiction (فکشن - Short Stories, Novels)</option>
-                    <option value="poetry">Poetry (شاعری)</option>
-                    <option value="criticism">Criticism (نغد)</option>
-                    <option value="research">Research (پٹّ و پول)</option>
-                    <option value="articles">Articles (نوشتانک - Essays)</option>
+                <div><label className="block text-xs font-bold uppercase tracking-wider mb-1">URL Slug <span className="text-rose-500">*</span></label><input type="text" value={formData.slug} onChange={e=>setFormData({...formData,slug:e.target.value})} placeholder="work-slug" className="w-full px-3.5 py-2.5 rounded-xl border bg-[#FBF9F5] dark:bg-[#0F1722] font-mono" /></div>
+                <div className="space-y-3">
+                  <label className="block text-xs font-bold uppercase tracking-wider">Section <span className="text-rose-500">*</span></label>
+                  <select value={formData.section} onChange={e=>{const section=e.target.value as "poetry"|"prose";setFormData({...formData,section,prose_group:"fiction",category:section==="poetry"?"ghazal":"short-story",nazm_subcategory:""});}} className="w-full px-3 py-2.5 rounded-xl border bg-[#FBF9F5] dark:bg-[#0F1722]"><option value="poetry">Poetry (شاعری)</option><option value="prose">Prose (نثر)</option></select>
+                  {formData.section === "prose" && <><label className="block text-xs font-bold uppercase tracking-wider">Group <span className="text-rose-500">*</span></label><select value={formData.prose_group} onChange={e=>{const group=e.target.value as "fiction"|"non-fiction";setFormData({...formData,prose_group:group,category:CATEGORY_CHILDREN(group)[0].slug});}} className="w-full px-3 py-2.5 rounded-xl border bg-[#FBF9F5] dark:bg-[#0F1722]"><option value="fiction">Fiction (فکشن)</option><option value="non-fiction">Non-Fiction (غیر افسانوی)</option></select></>}
+                  <label className="block text-xs font-bold uppercase tracking-wider">Category <span className="text-rose-500">*</span></label>
+                  <select value={formData.category} onChange={e=>setFormData({...formData,category:e.target.value as CategorySlug,nazm_subcategory:""})} className="w-full px-3 py-2.5 rounded-xl border bg-[#FBF9F5] dark:bg-[#0F1722]">
+                    {(formData.section === "poetry" ? CATEGORY_CHILDREN("poetry") : CATEGORY_CHILDREN(formData.prose_group)).map(c=><option key={c.slug} value={c.slug}>{c.englishName} ({c.urduName})</option>)}
                   </select>
+                  {formData.section === "poetry" && formData.category === "nazm" && <><label className="block text-xs font-bold uppercase tracking-wider">Nazm Subcategory <span className="text-rose-500">*</span></label><select value={formData.nazm_subcategory} onChange={e=>setFormData({...formData,nazm_subcategory:e.target.value as typeof formData.nazm_subcategory})} className="w-full px-3 py-2.5 rounded-xl border bg-[#FBF9F5] dark:bg-[#0F1722]"><option value="">Select a Nazm form</option>{CATEGORY_CHILDREN("nazm").map(c=><option key={c.slug} value={c.slug}>{c.englishName} ({c.urduName})</option>)}</select></>}
                 </div>
               </div>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={formData.is_featured} onChange={e=>setFormData({...formData,is_featured:e.target.checked})} className="accent-brand-teal" />Featured on homepage</label>
 
-              {/* Original Author & Original Title */}
+              {/* Translation attribution fields */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1">
-                    Original Writer Name <span className="text-rose-500">*</span>
+                    {formData.content_type === "original" ? "Brahui Author" : "Original Writer Name"} <span className="text-rose-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    value={formData.original_writer_name}
-                    onChange={(e) => setFormData({ ...formData, original_writer_name: e.target.value })}
-                    placeholder="Original writer name"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-[#FBF9F5] dark:bg-[#0F1722] text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-brand-teal"
-                  />
+                  {formData.content_type === "original" ? <div className="flex gap-2"><select value={formData.original_writer_name} onChange={e => setFormData({...formData, original_writer_name:e.target.value})} className="w-full px-3 py-2.5 rounded-xl border bg-white dark:bg-[#0F1722]"><option value="">Select Brahui writer</option>{writers.filter(w=>w.writer_type === "brahui").map(w=><option key={w.id} value={w.name}>{w.name}</option>)}</select><button type="button" onClick={async()=>{const name=prompt("Brahui writer name");if(!name?.trim())return;const slug=prompt("Writer slug",generateSlug(name))?.trim() || generateSlug(name);const bio=prompt("Short bio","") || "";const photo_url=prompt("Photo URL (optional)","") || null;const {data,error}=await supabase.from("writers").insert({name,slug,bio,photo_url,writer_type:"brahui"}).select().single();if(error){alert("Could not add writer.");return;}setWriters(prev=>[...prev,data]);setFormData(prev=>({...prev,original_writer_name:name}));}} className="px-3 rounded-lg bg-brand-gold/20 text-sm whitespace-nowrap">+ Add new writer</button></div> : <input type="text" value={formData.original_writer_name} onChange={(e) => setFormData({ ...formData, original_writer_name: e.target.value })} placeholder="Original writer name" className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-[#FBF9F5] dark:bg-[#0F1722] text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-brand-teal" />}
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1">
-                    Original Title
-                  </label>
+                {formData.content_type === "translation" && <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1">Original Title</label>
                   <input
                     type="text"
                     value={formData.original_title}
@@ -1249,12 +1283,12 @@ export default function AdminPage() {
                     placeholder="e.g. Toba Tek Singh"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-[#FBF9F5] dark:bg-[#0F1722] text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-brand-teal"
                   />
-                </div>
+                </div>}
               </div>
 
               {/* Translator Name & Cover Image */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
+                {formData.content_type === "translation" && <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1">
                     Translator Name
                   </label>
@@ -1265,18 +1299,18 @@ export default function AdminPage() {
                     placeholder="e.g. عبدالرزاق ساسولی"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-[#FBF9F5] dark:bg-[#0F1722] text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-brand-teal"
                   />
-                </div>
+                </div>}
 
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1">
-                    Cover Image URL / Upload
+                    Cover Image URL / Upload {formData.content_type === "original" && <span className="text-rose-500">*</span>}
                   </label>
                   <div className="flex gap-2">
                     <input
                       type="text"
                       value={formData.cover_image_url}
                       onChange={(e) => setFormData({ ...formData, cover_image_url: e.target.value })}
-                      placeholder="/brand-logo-circle.png"
+                      placeholder="/brand/logo.png"
                       className="w-full px-3.5 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-[#FBF9F5] dark:bg-[#0F1722] text-xs font-mono text-gray-900 dark:text-gray-100"
                     />
                     <label className="px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 cursor-pointer flex items-center shrink-0">
@@ -1291,7 +1325,7 @@ export default function AdminPage() {
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
-                    Brahui Translation Body <span className="text-rose-500">*</span>
+                    {formData.content_type === "original" ? "Original Brahui Writing Body" : "Brahui Translation Body"} <span className="text-rose-500">*</span>
                   </label>
                   <span className="text-xs text-gray-400">
                     Paragraph & line breaks preserved exactly
@@ -1303,13 +1337,13 @@ export default function AdminPage() {
                   lang="brh"
                   value={formData.body}
                   onChange={(e) => setFormData({ ...formData, body: e.target.value })}
-                  placeholder="داڑے براہوئی مٹ و بدل نا عبارت ءِ چسپاں (Paste) کبو..."
+                      placeholder="داڑے براہوئی زبان نا عبارت ءِ چسپاں (Paste) کبو..."
                   className="w-full p-4 rounded-xl border border-gray-300 dark:border-gray-700 bg-[#FBF9F5] dark:bg-[#0F1722] text-lg font-nastaliq leading-nastaliq text-gray-900 dark:text-gray-100 focus:outline-none focus:border-brand-teal"
                 />
               </div>
 
               {/* Original Text Section (Optional) */}
-              <div className="pt-4 border-t border-gray-200 dark:border-gray-800 space-y-4">
+              {formData.content_type === "translation" && <div className="pt-4 border-t border-gray-200 dark:border-gray-800 space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                     Original Source Text (Optional)
@@ -1364,17 +1398,21 @@ export default function AdminPage() {
                   placeholder="Paste original source text here..."
                   className="w-full p-3.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-[#FBF9F5] dark:bg-[#0F1722] text-sm text-gray-900 dark:text-gray-100"
                 />
-              </div>
+              </div>}
 
-              {/* Novel Chapters Section (If category is Fiction / Novel) */}
-              <div className="pt-4 border-t border-gray-200 dark:border-gray-800 space-y-4">
+              {formData.category === "research" && <textarea rows={4} value={formData.references_text} onChange={e=>setFormData({...formData,references_text:e.target.value})} placeholder="References" className="w-full p-3 rounded-xl border bg-white dark:bg-gray-900" />}
+              {formData.content_type === "original" && <div><label className="block text-xs font-bold mb-1">Cover alt text</label><input value={formData.cover_alt} onChange={e=>setFormData({...formData,cover_alt:e.target.value})} className="w-full p-2.5 rounded-xl border bg-white dark:bg-gray-900" placeholder="Describe the cover image" /></div>}
+              {formData.content_type === "original" && <div><label className="block text-xs font-bold mb-1">Publish date</label><input type="datetime-local" value={formData.published_at} onChange={e=>setFormData({...formData,published_at:e.target.value})} className="p-2.5 rounded-xl border bg-white dark:bg-gray-900" /></div>}
+
+              {/* Fiction chapters */}
+              {(formData.category === "novel" || formData.category === "novelette") && <div className="pt-4 border-t border-gray-200 dark:border-gray-800 space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
-                      Novel Chapters ({formData.chapters.length})
+                      Chapters / Parts ({formData.chapters.length})
                     </span>
                     <p className="text-[11px] text-gray-500">
-                      For novels: add and reorder multi-part chapters
+                      For novels or novelettes: add multi-part chapters
                     </p>
                   </div>
                   <button
@@ -1421,7 +1459,7 @@ export default function AdminPage() {
                     />
                   </div>
                 ))}
-              </div>
+              </div>}
 
               {/* PDF Download URL */}
               <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
@@ -1435,6 +1473,7 @@ export default function AdminPage() {
                   placeholder="https://... or /novel.pdf"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-[#FBF9F5] dark:bg-[#0F1722] text-xs font-mono text-gray-900 dark:text-gray-100"
                 />
+                <label className="inline-flex mt-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-xs cursor-pointer">Upload PDF<input type="file" accept="application/pdf,.pdf" onChange={handlePdfUpload} className="hidden" /></label>
               </div>
 
               {/* SEO Meta Description */}
@@ -1463,7 +1502,7 @@ export default function AdminPage() {
 
             {/* Right Column: Live Nastaliq Preview */}
             <div className="lg:col-span-5">
-              <div className="sticky top-28 bg-[#FBF9F5] dark:bg-[#0F1722] rounded-2xl border-2 border-dashed border-brand-gold/40 p-6 shadow-sm space-y-4">
+              <div id="work-live-preview" className="sticky top-28 bg-[#FBF9F5] dark:bg-[#0F1722] rounded-2xl border-2 border-dashed border-brand-gold/40 p-6 shadow-sm space-y-4">
                 <div className="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-gray-800">
                   <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand-teal dark:text-teal-400">
                     <Eye className="w-4 h-4" />
@@ -1500,10 +1539,7 @@ export default function AdminPage() {
                     </h4>
                   )}
 
-                  {/* Sample Meta line */}
-                  <div className="p-2.5 rounded-lg bg-white dark:bg-[#17212F] text-[11px] text-gray-500 leading-relaxed font-sans">
-                    Original: {formData.original_writer_name || "Author"} • Category: {formData.category}
-                  </div>
+                  {/* Sample Meta line */}<div className="p-2.5 rounded-lg bg-white dark:bg-[#17212F] text-[11px] text-gray-500 leading-relaxed font-sans">{formData.content_type === "original" ? `Author: ${formData.original_writer_name || "Brahui writer"}` : `Original author: ${formData.original_writer_name || "Author"}`} • Category: {formData.category}</div>
 
                   {/* Body Preview */}
                   {formData.body ? (

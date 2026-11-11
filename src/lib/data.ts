@@ -1,7 +1,31 @@
 import { supabase, isSupabaseConfigured } from "./supabase";
 import { STATIC_PAGES_SEED } from "@/data/seedData";
-import { Article, CategorySlug, Writer, StaticPageData } from "@/types";
+import { Article, CategorySlug, Writer, StaticPageData, CATEGORY_BY_SLUG, CATEGORY_NODES } from "@/types";
 import { normalizeUrduSearch } from "./utils";
+
+const LEGACY_CATEGORY_MAP: Record<string, CategorySlug> = {
+  fiction: "short-story", poetry: "nazm", criticism: "criticism", research: "research", articles: "articles",
+};
+
+function normalizeArticleRow(row: any): Article {
+  const slug = LEGACY_CATEGORY_MAP[row.category] || row.category;
+  const staticInfo = CATEGORY_BY_SLUG(slug);
+  return { ...row, category: slug, category_info: staticInfo ? { ...staticInfo, name_brh: row.category_info?.name_brh || row.category_info?.name_ur || staticInfo.urduName, id: row.category_info?.id, parent_id: row.category_info?.parent_id } as any : null } as Article;
+}
+
+function descendantsOf(slug: CategorySlug): Set<string> {
+  const descendants = new Set<string>([slug]);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const node of CATEGORY_NODES) {
+      if (node.parentSlug && descendants.has(node.parentSlug) && !descendants.has(node.slug)) {
+        descendants.add(node.slug); changed = true;
+      }
+    }
+  }
+  return descendants;
+}
 
 /**
  * Fetch all published articles with writer info
@@ -11,22 +35,19 @@ export async function getPublishedArticles(): Promise<Article[]> {
     try {
       const { data, error } = await supabase
         .from("articles")
-        .select(`
-          *,
-          writer:writers(*),
-          chapters(*)
-        `)
+        .select(`*, writer:writers(*), chapters(*), category_info:categories(*)`)
         .eq("status", "published")
         .order("published_at", { ascending: false });
+      if (!error && data) return data.map(normalizeArticleRow);
 
-      if (!error && data) {
-        return data as Article[];
-      }
+      // Lets the pre-taxonomy site continue serving existing rows until its migration is applied.
+      const fallback = await supabase.from("articles").select(`*, writer:writers(*), chapters(*)`).eq("status", "published").order("published_at", { ascending: false });
+      if (!fallback.error && fallback.data) return fallback.data.map(normalizeArticleRow);
+      console.warn("Supabase fetch failed while loading published articles:", error || fallback.error);
     } catch (e) {
       console.warn("Supabase fetch failed while loading published articles:", e);
     }
   }
-
   return [];
 }
 
@@ -36,28 +57,17 @@ export async function getPublishedArticles(): Promise<Article[]> {
 export async function getArticleBySlug(slug: string): Promise<Article | null> {
   if (isSupabaseConfigured) {
     try {
-      const { data, error } = await supabase
-        .from("articles")
-        .select(`
-          *,
-          writer:writers(*),
-          chapters(*)
-        `)
-        .eq("slug", slug)
-        .single();
-
+      const { data, error } = await supabase.from("articles")
+        .select(`*, writer:writers(*), chapters(*), category_info:categories(*)`)
+        .eq("slug", slug).single();
       if (!error && data) {
-        // Sort chapters if any
-        if (data.chapters && Array.isArray(data.chapters)) {
-          data.chapters.sort((a: any, b: any) => a.chapter_number - b.chapter_number);
-        }
-        return data as Article;
+        if (data.chapters && Array.isArray(data.chapters)) data.chapters.sort((a: any, b: any) => a.chapter_number - b.chapter_number);
+        return normalizeArticleRow(data);
       }
-    } catch (e) {
-      console.warn("Supabase fetch failed while loading an article:", e);
-    }
+      const fallback = await supabase.from("articles").select(`*, writer:writers(*), chapters(*)`).eq("slug", slug).single();
+      if (!fallback.error && fallback.data) return normalizeArticleRow(fallback.data);
+    } catch (e) { console.warn("Supabase fetch failed while loading an article:", e); }
   }
-
   return null;
 }
 
@@ -67,10 +77,12 @@ export async function getArticleBySlug(slug: string): Promise<Article | null> {
 export async function getArticlesByCategory(
   category: CategorySlug,
   page = 1,
-  limit = 12
+  limit = 12,
+  contentType?: "translation" | "original"
 ): Promise<{ articles: Article[]; total: number }> {
   const allArticles = await getPublishedArticles();
-  const filtered = allArticles.filter((a) => a.category.toLowerCase() === category.toLowerCase());
+  const descendants = descendantsOf(category);
+  const filtered = allArticles.filter((a) => descendants.has(a.category_info?.slug || a.category) && (!contentType || (a.content_type || "translation") === contentType));
   const startIndex = (page - 1) * limit;
   const paginated = filtered.slice(startIndex, startIndex + limit);
 
@@ -102,6 +114,17 @@ export async function getAllWriters(): Promise<Writer[]> {
   return [];
 }
 
+export async function getCategoryBrahuiNames(): Promise<Record<string, string>> {
+  if (!isSupabaseConfigured) return {};
+  try {
+    const { data, error } = await supabase.from("categories").select("slug, name_brh, name_ur, name_en");
+    if (!error && data) return Object.fromEntries(data.map((row: any) => [row.slug, row.name_brh || row.name_ur || row.name_en]));
+  } catch (error) {
+    console.warn("Supabase fetch failed while loading category names:", error);
+  }
+  return {};
+}
+
 /**
  * Fetch writer by slug with their articles
  */
@@ -126,12 +149,14 @@ export async function getRelatedArticles(
   currentSlug: string,
   category: CategorySlug,
   writerId?: string | null,
-  limit = 3
+  limit = 3,
+  contentType?: "translation" | "original"
 ): Promise<Article[]> {
   const all = await getPublishedArticles();
   const others = all.filter((a) => a.slug !== currentSlug);
 
-  const matched = others.filter((a) => a.category === category || (writerId && a.writer_id === writerId));
+  const wantedCategory = CATEGORY_BY_SLUG(category)?.slug || category;
+  const matched = others.sort((a,b) => Number((b.content_type || "translation") === contentType && b.category === wantedCategory) - Number((a.content_type || "translation") === contentType && a.category === wantedCategory) || Number(Boolean(writerId && b.writer_id === writerId)) - Number(Boolean(writerId && a.writer_id === writerId))).filter((a) => a.category === wantedCategory || (writerId && a.writer_id === writerId));
   if (matched.length >= limit) {
     return matched.slice(0, limit);
   }
@@ -191,12 +216,14 @@ export async function getStaticPage(id: string): Promise<StaticPageData> {
         // Normalize only the previous site name, preserving other page text.
         const rebrand = (value: string) =>
           value
-            .replaceAll("Brahui Tarjuma", "Brahui Matt o badal")
-            .replaceAll("براہوئی ترجمہ", "براہوئی مٹ و بدل");
+            .replaceAll("Brahui Tarjuma", "Brahui Laozaank")
+            .replaceAll("براہوئی ترجمہ", "براہوئی لوزانک");
         return {
           ...staticPage,
           title: rebrand(staticPage.title),
-          body: rebrand(staticPage.body),
+          body: id === "about"
+            ? rebrand(staticPage.body).replace(/a dedicated literary repository committed to translating[\s\S]*?language\./i, "a literary publication for original writing in Brahui and translations into Brahui.").replace(/committed to translating world literature[\s\S]*?Brahui language\./i, "publishing original Brahui writing and translations into Brahui.")
+            : rebrand(staticPage.body),
         };
       }
     } catch {

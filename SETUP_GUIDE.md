@@ -1,6 +1,6 @@
-# Brahui Matt o badal (براہوئی مٹ و بدل) — Complete Setup & Publishing Guide
+# Brahui Laozaank (براہوئی لوزانک) — Complete Setup & Publishing Guide
 
-Welcome to **Brahui Matt o badal**! This guide is written in clear, simple language assuming no prior coding experience. Follow these steps to set up your database, launch your website for free on Vercel, and publish your first Brahui translations.
+Welcome to **Brahui Laozaank**! This guide is written in clear, simple language assuming no prior coding experience. Follow these steps to set up your database, launch your website for free on Vercel, and publish original Brahui writing and translations.
 
 ---
 
@@ -27,7 +27,7 @@ Supabase provides your free PostgreSQL database, image/PDF storage, and secure a
 2. Sign in or create a free account (you can sign in with your GitHub account or email).
 3. Click **"New Project"**.
 4. Choose an organization (or create one), then enter:
-   - **Name**: `Brahui Matt o badal`
+   - **Name**: `Brahui Laozaank`
    - **Database Password**: Choose a strong password and save it somewhere safe.
    - **Region**: Choose the closest region to your primary audience (e.g., *South Asia / Singapore / Frankfurt*).
    - **Pricing Plan**: Select **Free tier**.
@@ -47,9 +47,16 @@ Once your Supabase project dashboard loads:
 6. You will see a green message saying **"Success. No rows returned"**.
    - This automatically creates your `articles`, `chapters`, `writers`, and `static_pages` tables.
    - It sets up security policies (Row Level Security) so the public can only read published articles.
-   - It inserts the 3 initial sample translations and authors (Manto, Faiz, Borges, Hemingway).
+   - It creates the tables, security policies, and storage buckets. It does not insert demo articles.
 
 ---
+
+### Existing database from the previous site version
+
+If the website is already using Supabase, do not run the fresh-install schema over it. In **SQL Editor**, run these files in order, one query at a time:
+
+1. `migration-brahui-adab.sql` adds the Brahui Laozaank content fields and preserves existing translations.
+2. `migration-taxonomy.sql` adds the Poetry / Prose category tree and maps existing categories without deleting articles.
 
 ## 3. Setting Up Storage Buckets (Covers & PDFs)
 
@@ -65,13 +72,13 @@ Your database script has already configured the buckets, but let's confirm them:
 
 ## 4. Creating Your Admin Account
 
-Only **one owner/admin account** will have access to publish or edit translations. Public signups are blocked.
+Only **one owner/admin account** will have access to publish or edit original writing and translations. Public signups are blocked.
 
 1. In Supabase, click **"Authentication"** on the left menu (person icon).
 2. Go to the **"Users"** tab.
 3. Click **"Add user"** > **"Create user"**.
 4. Enter:
-   - **Email**: Enter your personal email address (e.g., `admin@brahuitarjuma.org` or your Gmail).
+   - **Email**: Enter your personal email address (for example, `admin@yourdomain.com` or your Gmail).
    - **Password**: Create a secure password for your admin login.
    - Check **"Auto Confirm User?"** to **YES**.
 5. Click **"Create user"**.
@@ -110,7 +117,7 @@ Only **one owner/admin account** will have access to publish or edit translation
 
 ## 6. Testing Locally on Your Computer
 
-1. Open your terminal in the `Brahui_Tarjuma` folder.
+1. Open your terminal in the `Brahui_Adab` folder.
 2. Start the development server:
    ```bash
    npm run dev
@@ -120,7 +127,7 @@ Only **one owner/admin account** will have access to publish or edit translation
    http://localhost:3000
    ```
 4. You will see:
-   - The homepage with the Brahui Matt o badal logo.
+   - The homepage with the Brahui Laozaank logo.
    - The articles displayed in beautiful **Jameel Noori Nastaliq** calligraphy.
    - The Dark / Light mode toggle in the top right.
    - Visiting `http://localhost:3000/admin` lets you sign in with your email and password.
@@ -131,15 +138,15 @@ Only **one owner/admin account** will have access to publish or edit translation
 
 1. Go to [github.com](https://github.com) and log in.
 2. Click the **"+"** icon in the top right and select **"New repository"**.
-3. Name it `brahui-tarjuma`.
+3. Name it `brahui-adab`.
 4. Leave it Public or Private (either is fine) and click **"Create repository"**.
 5. In your local terminal, run:
    ```bash
    git init
    git add .
-   git commit -m "Initial commit of Brahui Matt o badal website"
+   git commit -m "Initial commit of Brahui Laozaank website"
    git branch -M main
-   git remote add origin https://github.com/YOUR_USERNAME/brahui-tarjuma.git
+   git remote add origin https://github.com/YOUR_USERNAME/brahui-adab.git
    git push -u origin main
    ```
 
@@ -149,12 +156,12 @@ Only **one owner/admin account** will have access to publish or edit translation
 
 1. Go to [vercel.com](https://vercel.com) and sign in with your GitHub account.
 2. Click **"Add New..."** > **"Project"**.
-3. Select your `brahui-tarjuma` repository and click **"Import"**.
+3. Select your `brahui-adab` repository and click **"Import"**.
 4. Under **"Environment Variables"**, add these variables:
    - `NEXT_PUBLIC_SUPABASE_URL`: paste your Supabase URL
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: paste your Supabase anon key
    - `ADMIN_EMAIL`: the same owner email assigned the `owner` app metadata role
-   - `NEXT_PUBLIC_SITE_URL`: paste your live domain (e.g., `https://brahuitarjuma.org` or `https://brahui-tarjuma.vercel.app`)
+   - `NEXT_PUBLIC_SITE_URL`: paste your live domain (for example, `https://yourdomain.com`).
 5. Click **"Deploy"**.
 6. In about 60 seconds, your site is live across the world!
 
@@ -163,7 +170,7 @@ Only **one owner/admin account** will have access to publish or edit translation
 ## 9. Connecting a Custom Domain
 
 1. In your Vercel project dashboard, click **"Settings"** > **"Domains"**.
-2. Type your domain name (e.g., `brahuitarjuma.org` or `brahuitarjuma.com`) and click **"Add"**.
+2. Type your domain name (for example, `yourdomain.com`) and click **"Add"**.
 3. Vercel will show you the exact DNS records (usually an `A` record pointing to `76.76.21.21` or a `CNAME` record).
 4. Log into the registrar where you bought your domain (Namecheap, GoDaddy, Cloudflare, etc.).
 5. Add the DNS records shown by Vercel.
@@ -176,7 +183,7 @@ Only **one owner/admin account** will have access to publish or edit translation
 This ensures Google quickly indexes all your Brahui translations:
 
 1. Go to [search.google.com/search-console](https://search.google.com/search-console).
-2. Add your website property (e.g., `https://brahuitarjuma.org`).
+2. Add your website property (for example, `https://yourdomain.com`).
 3. Verify ownership (the easiest method on Vercel is via DNS TXT record or HTML tag).
 4. Once verified, click **"Sitemaps"** in the left sidebar menu.
 5. In the "Add a new sitemap" box, type:
@@ -188,30 +195,22 @@ This ensures Google quickly indexes all your Brahui translations:
 
 ---
 
-## 11. How to Publish a New Article (Admin Guide)
+## 11. How to Publish Original Writing or a Translation
 
-Whenever you receive a new translation from a translator:
+### Publish Original Brahui Writing
 
-1. Visit your website's admin page: `https://yourdomain.com/admin`.
-2. Sign in with your email and password.
-3. Click the **"New Translation"** button (or click the **"New Article Form"** tab).
-4. Fill in the fields:
-   - **Title (Brahui)**: Paste the translation title in Urdu script. (e.g., `ٹوبہ ٹیک سنگھ`).
-   - **Subtitle (Brahui)**: Optional subtitle or description.
-   - **URL Slug**: Automatically generated in English/Latin letters (e.g., `toba-tek-singh`). You can edit it if you want.
-   - **Category**: Select from the 5 standard categories:
-     - `Fiction` (Short stories, novels)
-     - `Poetry`
-     - `Criticism`
-     - `Research`
-     - `Articles` (Essays)
-   - **Original Writer Name**: The original author (e.g., `Saadat Hasan Manto` or `سعادت حسن منٹو`).
-   - **Original Title**: The title in the original language (e.g., `Toba Tek Singh`).
-   - **Translator Name**: Name of the translator in Brahui or English (e.g., `عبدالرزاق ساسولی`).
-   - **Cover Image**: You can upload an image from your computer (auto-stored in Supabase Storage) or leave `/brand-logo-circle.png` to use the official circular logo.
-   - **Brahui Translation Body**: Paste the complete Brahui text. Paragraph breaks and poem line breaks are preserved exactly as pasted. Look at the **Live Nastaliq Preview** on the right side to see how it renders!
-   - **Original Text (Optional)**: If you have the original source text (Urdu, English, Arabic, etc.), paste it in the Original Text box, choose the direction (`LTR` for English, `RTL` for Urdu/Arabic), and enter the citation source.
-   - **For Novels**: Click **"Add Chapter"** to add Chapter 1, Chapter 2, etc., and optionally paste a PDF download link.
-   - **SEO Meta Description**: Click **"Auto-fill from body"** to generate a 150-character summary for Google.
-5. Click **"Publish Translation"**.
-6. The article is instantly live on the website, featured on the homepage, listed under its category, attributed to the author, and included in the sitemap!
+1. Open `https://yourdomain.com/admin` and sign in.
+2. Choose **New Original Writing**.
+3. Enter the Brahui title, optional subtitle, and editable slug. Choose Poetry or Prose, then select a category. Fiction categories include Short Story, Novelette, Novel, Drama, Folk Tales, and Humour & Satire. For Nazm, select its poetry subtype.
+4. Choose an existing Brahui author or use **+ Add new writer**.
+5. Upload a cover and enter useful alt text. Paste the Brahui body; poetry line and stanza breaks are preserved. Fiction works can include chapters; Research works can include references. Add a PDF if needed and review the SEO description.
+6. Choose Draft or Publish. Published work is listed on Home, **Original Writing**, its category, the writer page, Search, and the sitemap.
+
+### Publish a Translation
+
+1. Open `/admin` and choose **New Translation**.
+2. Enter the Brahui title, subtitle, slug, category, original author, original title, translator, cover, and translated Brahui text.
+3. To show the source alongside the translation, paste the original text and choose its language and direction; add a source citation. Add chapters for Fiction and an optional PDF or SEO description.
+4. Choose Draft or Publish. Published translations appear on Home, their Poetry or Prose section and category page, the writer page, Search, and the sitemap. When original text exists, the article shows **View Original Text**.
+
+The same editor supports saving drafts, previewing the live Nastaliq rendering, editing, and deleting with confirmation.

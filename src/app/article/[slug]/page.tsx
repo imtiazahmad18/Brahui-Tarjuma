@@ -3,7 +3,10 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getArticleBySlug, getRelatedArticles } from "@/lib/data";
 import ArticleDetailView from "@/components/ArticleDetailView";
+import { getSiteName } from "@/lib/brand";
 import { ArticleJsonLd } from "@/components/SEOHead";
+import { cookies } from "next/headers";
+import { normalizeLocale } from "@/lib/i18n";
 
 interface PageProps {
   params: {
@@ -11,11 +14,13 @@ interface PageProps {
   };
 }
 
-export const revalidate = 60; // ISR revalidation
+export const revalidate = 0; // ISR revalidation
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const article = await getArticleBySlug(params.slug);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://brahuitarjuma.org";
+  const locale = normalizeLocale(cookies().get("brahui-locale")?.value);
+  const siteName = getSiteName(locale);
 
   if (!article) {
     return {
@@ -23,14 +28,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
-  const title = `${article.title} — براہوئی مٹ و بدل`;
-  const description =
-    article.meta_description ||
-    article.subtitle ||
-    `${article.title} - Brahui translation of ${article.original_title || "world literature"}.`;
-  const coverImage = article.cover_image_url.startsWith("http")
-    ? article.cover_image_url
-    : `${siteUrl}${article.cover_image_url}`;
+  const title = article.title;
+  const description = article.meta_description || article.subtitle || (article.content_type === "original" ? `${article.title} — original Brahui writing by ${article.writer?.name || "a Brahui writer"}.` : `${article.title} — translated into Brahui from ${article.original_title || "world literature"}.`);
+  const coverImage = article.cover_image_url
+    ? (article.cover_image_url.startsWith("http") ? article.cover_image_url : `${siteUrl}${article.cover_image_url}`)
+    : `${siteUrl}/brand/og-image.png`;
 
   return {
     title,
@@ -42,7 +44,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       title,
       description,
       url: `${siteUrl}/article/${article.slug}`,
-      siteName: "Brahui Matt o badal",
+      siteName,
       images: [
         {
           url: coverImage,
@@ -65,6 +67,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function ArticlePage({ params }: PageProps) {
+  const locale = normalizeLocale(cookies().get("brahui-locale")?.value);
   const article = await getArticleBySlug(params.slug);
 
   if (!article) {
@@ -72,16 +75,14 @@ export default async function ArticlePage({ params }: PageProps) {
   }
 
   const relatedArticles = await getRelatedArticles(
-    article.slug,
-    article.category,
-    article.writer_id
+    article.slug, article.category, article.writer_id, 3, article.content_type || "translation"
   );
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://brahuitarjuma.org";
 
   return (
     <>
-      <ArticleJsonLd article={article} siteUrl={siteUrl} />
+      <ArticleJsonLd article={article} siteUrl={siteUrl} locale={locale} />
       <ArticleDetailView article={article} relatedArticles={relatedArticles} />
     </>
   );

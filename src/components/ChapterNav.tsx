@@ -3,6 +3,7 @@
 import React from "react";
 import { Chapter } from "@/types";
 import { ChevronLeft, ChevronRight, BookOpen } from "lucide-react";
+import { useLocale } from "@/components/LocaleProvider";
 
 interface ChapterNavProps {
   chapters: Chapter[];
@@ -15,6 +16,7 @@ export default function ChapterNav({
   currentChapterIndex,
   onSelectChapter,
 }: ChapterNavProps) {
+  const { t } = useLocale();
   if (!chapters || chapters.length === 0) return null;
 
   const currentChapter = chapters[currentChapterIndex];
@@ -26,17 +28,17 @@ export default function ChapterNav({
       <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 dark:border-gray-800">
         <div className="flex items-center gap-2 text-sm font-semibold text-brand-teal dark:text-teal-300">
           <BookOpen className="w-4 h-4" />
-          <span>Novel Chapters ({chapters.length} Parts)</span>
+          <span>{t("chapter.list")} ({chapters.length})</span>
         </div>
         <span className="text-xs text-gray-500 dark:text-gray-400">
-          Chapter {currentChapterIndex + 1} of {chapters.length}
+          {t("label.chapter")} {currentChapterIndex + 1} / {chapters.length}
         </span>
       </div>
 
       {/* Chapter Dropdown Selector */}
       <div className="mb-4">
         <label htmlFor="chapter-select" className="sr-only">
-          Select Chapter
+          {t("chapter.select")}
         </label>
         <select
           id="chapter-select"
@@ -46,7 +48,7 @@ export default function ChapterNav({
         >
           {chapters.map((chap, idx) => (
             <option key={chap.id || idx} value={idx}>
-              Chapter {chap.chapter_number}: {chap.title}
+              {t("label.chapter")} {chap.chapter_number}: {chap.title}
             </option>
           ))}
         </select>
@@ -64,7 +66,7 @@ export default function ChapterNav({
           }`}
         >
           <ChevronLeft className="w-4 h-4" />
-          <span>Previous Chapter</span>
+          <span>{t("chapter.previous")}</span>
         </button>
 
         <button
@@ -76,7 +78,7 @@ export default function ChapterNav({
               : "opacity-40 cursor-not-allowed text-gray-400 dark:text-gray-600 bg-gray-100 dark:bg-gray-800"
           }`}
         >
-          <span>Next Chapter</span>
+          <span>{t("chapter.next")}</span>
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
