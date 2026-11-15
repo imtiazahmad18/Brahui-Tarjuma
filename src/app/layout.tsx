@@ -13,7 +13,7 @@ import { SITE_NAME, SITE_NAME_BRH, getSiteName } from "@/lib/brand";
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://brahuitarjuma.org";
 
 export const viewport: Viewport = {
-  themeColor: "#0D4D54",
+  themeColor: "#1A120E",
   width: "device-width",
   initialScale: 1,
 };

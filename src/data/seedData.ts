@@ -3,8 +3,8 @@ import { StaticPageData } from "@/types";
 export const STATIC_PAGES_SEED: Record<string, StaticPageData> = {
   about: {
     id: "about",
-    title: "About Brahui Laozaank (براہوئی لوزانک)",
-    body: `Brahui Laozaank (براہوئی لوزانک) publishes both original writing in Brahui by Brahui writers and translations of world literature, poetry, criticism, and research into Brahui.
+    title: "About Brahui Laozaank (براہوئی لؤزانک)",
+    body: `Brahui Laozaank (براہوئی لؤزانک) publishes both original writing in Brahui by Brahui writers and translations of world literature, poetry, criticism, and research into Brahui.
 
 Written in the time-honored Nastaliq calligraphic tradition, our digital archive provides open, free access to Brahui speakers, students, researchers, and book lovers around the globe.
 

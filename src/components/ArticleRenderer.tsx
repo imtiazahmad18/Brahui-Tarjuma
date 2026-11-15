@@ -20,7 +20,7 @@ export default function ArticleRenderer({
   const isRubai = category === "rubai";
   const readingBaseSize = fontSize + (brahuiMode && isPoetry ? 2 : 0);
   const responsiveFontSize = brahuiMode
-    ? `clamp(${Math.max(22, readingBaseSize - 2)}px, calc(${readingBaseSize}px - 2px + 0.45vw), ${readingBaseSize}px)`
+    ? `clamp(${Math.max(24, readingBaseSize - 2)}px, calc(${readingBaseSize}px - 2px + 0.45vw), ${readingBaseSize}px)`
     : `clamp(${Math.max(16, fontSize - 2)}px, calc(${fontSize}px - 2px + 0.45vw), ${fontSize}px)`;
 
   if (isPoetry) {

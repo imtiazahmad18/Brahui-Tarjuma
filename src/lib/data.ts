@@ -217,7 +217,8 @@ export async function getStaticPage(id: string): Promise<StaticPageData> {
         const rebrand = (value: string) =>
           value
             .replaceAll("Brahui Tarjuma", "Brahui Laozaank")
-            .replaceAll("براہوئی ترجمہ", "براہوئی لوزانک");
+            .replaceAll("براہوئی ترجمہ", "براہوئی لؤزانک")
+            .replaceAll("براہوئی لوزانک", "براہوئی لؤزانک");
         return {
           ...staticPage,
           title: rebrand(staticPage.title),

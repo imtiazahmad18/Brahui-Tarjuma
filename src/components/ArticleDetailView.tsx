@@ -24,9 +24,9 @@ export default function ArticleDetailView({
   const { locale, t, categoryName } = useLocale();
   const isBrh = locale === "brh";
   // Nastaliq needs a larger default size to read comfortably on screen.
-  const [fontSize, setFontSize] = useState(isBrh ? 24 : 20);
+  const [fontSize, setFontSize] = useState(isBrh ? 27 : 20);
   const [currentChapterIndex, setCurrentChapterIndex] = useState(0);
-  useEffect(() => setFontSize(isBrh ? 24 : 20), [isBrh]);
+  useEffect(() => setFontSize(isBrh ? 27 : 20), [isBrh]);
 
   const categoryInfo = CATEGORIES[article.category] || {
     englishName: article.category,
@@ -141,7 +141,7 @@ export default function ArticleDetailView({
       <ReaderToolbar
         readingTime={readingTime}
         fontSize={fontSize}
-        minFontSize={isBrh ? 22 : 16}
+        minFontSize={isBrh ? 24 : 16}
         setFontSize={setFontSize}
         title={article.title}
         pdfUrl={article.pdf_url}

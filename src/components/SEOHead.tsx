@@ -75,7 +75,7 @@ export function WebSiteJsonLd({ siteUrl, locale = "en" }: { siteUrl: string; loc
     "@context": "https://schema.org",
     "@type": "WebSite",
     "name": siteName,
-    "alternateName": locale === "brh" ? SITE_NAME : "لوزانک",
+    "alternateName": locale === "brh" ? SITE_NAME : "لؤزانک",
     "url": siteUrl,
     "publisher": {
       "@type": "Organization",

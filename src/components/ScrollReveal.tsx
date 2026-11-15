@@ -8,6 +8,7 @@ export default function ScrollReveal() {
     const reveal = (element: HTMLElement) => {
       if (targets.has(element)) return;
       targets.add(element);
+      element.dataset.scrollReveal = "";
       if (observer) observer.observe(element);
       else element.classList.add("is-visible");
     };
@@ -23,8 +24,9 @@ export default function ScrollReveal() {
         }, { threshold: 0.12, rootMargin: "0px 0px -32px 0px" });
 
     const scan = (root: ParentNode) => {
-      if (root instanceof HTMLElement && root.matches("[data-scroll-reveal]")) reveal(root);
-      root.querySelectorAll<HTMLElement>("[data-scroll-reveal]").forEach(reveal);
+      const selector = "[data-scroll-reveal], main section, main article";
+      if (root instanceof HTMLElement && root.matches(selector)) reveal(root);
+      root.querySelectorAll<HTMLElement>(selector).forEach(reveal);
     };
 
     document.documentElement.classList.add("scroll-reveal-ready");
